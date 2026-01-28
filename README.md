@@ -1,73 +1,15 @@
-# React + TypeScript + Vite
+Esta aplicação representa o **frontend web do Finança Fácil**, um sistema de controle financeiro pessoal desenvolvido no modelo **SaaS (Software as a Service)**.
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+O objetivo do Finança Fácil é oferecer aos usuários uma forma simples, organizada e confiável de gerenciar sua vida financeira, permitindo o controle de receitas, despesas, lançamentos futuros e recorrentes, conciliação com extratos bancários, acompanhamento de orçamento e visualização de relatórios financeiros.
 
-Currently, two official plugins are available:
+Este frontend é responsável por toda a **experiência de interação do usuário**, incluindo:
+- Tela inicial (landing page)
+- Cadastro de usuários
+- Autenticação e gerenciamento de sessão via JWT
+- Recuperação e redefinição de senha
+- Consumo seguro da API backend
+- Exibição e manipulação das informações financeiras
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+A aplicação foi construída utilizando **React com TypeScript**, adotando uma arquitetura organizada e escalável, preparada para evolução contínua do produto, integração com novos módulos e adaptação para diferentes dispositivos.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
-
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
-
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+O frontend consome uma **API REST desenvolvida em .NET**, mantendo uma separação clara de responsabilidades entre interface e regras de negócio, o que permite deploys independentes, maior manutenibilidade e facilidade de expansão futura, incluindo versões mobile e integrações conversacionais.
