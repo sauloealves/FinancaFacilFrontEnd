@@ -1,0 +1,17 @@
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.input-group input {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-300);
+  font-size: var(--font-body);
+}
+
+.input-group input:focus {
+  outline: none;
+  border-color: var(--primary-600);
+}

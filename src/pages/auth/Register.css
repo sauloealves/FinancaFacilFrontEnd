@@ -1,0 +1,26 @@
+.auth-container {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(
+    135deg,
+    var(--gray-100),
+    var(--gray-200)
+  );
+}
+
+.auth-card {
+  width: 100%;
+  max-width: 440px;
+  background-color: var(--white);
+  border-radius: var(--radius-lg);
+  padding: var(--space-5);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.08);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}

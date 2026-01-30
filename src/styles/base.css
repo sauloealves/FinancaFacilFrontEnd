@@ -1,0 +1,26 @@
+body {
+  font-family: var(--font-family);
+  font-size: var(--font-body);
+  line-height: var(--line-body);
+  color: var(--gray-900);
+  background-color: var(--gray-100);
+}
+
+h1 {
+  font-size: var(--font-h1);
+  line-height: var(--line-h1);
+  font-weight: 600;
+}
+
+h2 {
+  font-size: var(--font-h2);
+  line-height: var(--line-h2);
+  font-weight: 600;
+}
+
+label {
+  font-size: var(--font-label);
+  line-height: var(--line-label);
+  font-weight: 500;
+  color: var(--gray-700);
+}

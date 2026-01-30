@@ -1,9 +1,12 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import Login from "../pages/Login";
-import Register from "../pages/Register";
-import ForgotPassword from "../pages/ForgotPassword";
+
 import PrivateRoute from "./PrivateRouter";
 import Dashboard from "../pages/Dashboard";
+import PrivateLayout from "../layouts/PrivateLayout";
+import Login from "../pages/auth/Login";
+import Register from "../pages/auth/Register";
+import ForgotPassword from "../pages/auth/ForgotPassword";
+import AppLayout from "../components/layout/AppLayout/AppLayout";
 
 export default function AppRouter() {
   return (
@@ -13,10 +16,11 @@ export default function AppRouter() {
         <Route path="/register" element={<Register />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route
-          path="/"
+          path="/" 
           element={
             <PrivateRoute>
-              <Dashboard />
+              <AppLayout>                
+              </AppLayout>              
             </PrivateRoute>
           }
         />

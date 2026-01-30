@@ -1,0 +1,60 @@
+:root {
+  /* =========================
+     COLORS
+  ========================== */
+
+  /* Primary */
+  --primary-600: #2563EB;
+  --primary-700: #1D4ED8;
+
+  /* Status */
+  --success: #16A34A;
+  --warning: #F59E0B;
+  --danger:  #DC2626;
+
+  /* Grays */
+  --gray-900: #111827;
+  --gray-800: #1F2937;
+  --gray-700: #374151;
+  --gray-500: #6B7280;
+  --gray-300: #D1D5DB;
+  --gray-200: #E5E7EB;
+  --gray-100: #F9FAFB;
+
+  /* Base */
+  --white: #FFFFFF;
+
+  /* =========================
+     TYPOGRAPHY
+  ========================== */
+
+  --font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+
+  --font-h1: 24px;
+  --font-h2: 20px;
+  --font-body: 14px;
+  --font-label: 12px;
+
+  --line-h1: 32px;
+  --line-h2: 28px;
+  --line-body: 20px;
+  --line-label: 16px;
+
+  /* =========================
+     SPACING (8px system)
+  ========================== */
+
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+
+  /* =========================
+     RADIUS
+  ========================== */
+
+  --radius-sm: 6px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+}

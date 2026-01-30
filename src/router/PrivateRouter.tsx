@@ -7,5 +7,7 @@ type Props = {
 };
 
 export default function PrivateRoute({ children }: Props) {
+  console.log("PrivateRoute: Checking authentication");
+  console.log("Is authenticated:", isAuthenticated());
   return isAuthenticated() ? children : <Navigate to="/login" replace />;
 }
