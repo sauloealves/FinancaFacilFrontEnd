@@ -5,6 +5,7 @@ type InputProps = {
   type?: string;
   value: string;
   placeholder?: string;
+  error?: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
@@ -13,6 +14,7 @@ export default function Input({
   type = "text",
   value,
   placeholder,
+  error,
   onChange,
 }: Readonly<InputProps>) {
   return (
@@ -22,8 +24,9 @@ export default function Input({
         type={type}
         value={value}
         placeholder={placeholder}
-        onChange={onChange}
+        onChange={onChange}        
       />
+      {error && <span className="input-error">{error}</span>}
     </div>
   );
 }

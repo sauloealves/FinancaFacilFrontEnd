@@ -1,9 +1,37 @@
 
-import { Card } from "../components/ui";
+import { useState } from "react";
+import { Card, Modal, Button } from "../components/ui";
+
 import "./Dashboard.css";
 
 export default function DashboardPage() {
+  
+  const [open, setOpen] = useState(false);
+
   return (
+
+    <>
+      {/* <Button onClick={() => setOpen(true)}>
+        Abrir modal
+      </Button> */}
+
+      <Modal
+        isOpen={open}
+        title="Teste de Modal"
+        onClose={() => setOpen(false)}
+        footer={
+          <>
+            <Button variant="secondary" onClick={() => setOpen(false)}>
+              Cancelar
+            </Button>
+            <Button>
+              Salvar
+            </Button>
+          </>
+        }
+      >
+        Conteúdo do modal aqui
+      </Modal>
     <div className="dashboard">      
 
       {/* KPI CARDS */}
@@ -44,5 +72,7 @@ export default function DashboardPage() {
         </Card>
       </div>
     </div>
+
+    </>
   );
 }

@@ -1,0 +1,16 @@
+.transfer-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  margin-bottom: var(--space-4);
+}
+
+.transfer-select {
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-300);
+}
+
+.transfer-select.error {
+  border-color: var(--danger);
+}

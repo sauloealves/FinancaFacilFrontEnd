@@ -1,11 +1,19 @@
+import { useState } from "react";
 import Button from "../../ui/Button/Button";
 import "./Header.css";
+import RevenueModal from "../../../features/revenue/RevenueModal";
+import ExpenseModal from '../../../features/expense/expenseModal';
+import TransferModal from '../../../features/transfer/transferModal';
 
 type HeaderProps = {
   title?: string;
 };
 
 export default function Header({ title = "Dashboard" }: HeaderProps) {
+  const [openRevenue, setOpenRevenue] = useState(false);
+  const [openExpense, setOpenExpense] = useState(false);
+  const [openTransfer, setOpenTransfer] = useState(false);
+  
   return (
     <header className="header">
       {/* LEFT */}
@@ -23,8 +31,24 @@ export default function Header({ title = "Dashboard" }: HeaderProps) {
 
       {/* RIGHT */}
       <div className="header-right">
-        <Button>+ Receita</Button>
-        <Button variant="secondary">+ Despesa</Button>
+        <Button onClick={() => setOpenRevenue(true)}>+ Receita</Button>
+        <Button variant="danger" onClick={() => setOpenExpense(true)}>+ Despesa</Button>
+        <Button variant="secondary" onClick={() => setOpenTransfer(true)}>+ Transferência</Button>
+
+        <RevenueModal
+          isOpen={openRevenue}
+          onClose={() => setOpenRevenue(false)}
+        />
+
+        <TransferModal
+          isOpen={openTransfer}
+          onClose={() => setOpenTransfer(false)}
+        />
+
+        <ExpenseModal
+          isOpen={openExpense}
+          onClose={() => setOpenExpense(false)}
+        />
 
         <div className="header-user">
           <span className="user-avatar">SA</span>
