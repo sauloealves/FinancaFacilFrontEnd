@@ -1,13 +1,14 @@
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "../../components/layout/AppLayout/AppLayout";
 import DashboardPage from "../../pages/Dashboard";
-
+import LaunchesPage from "../../pages/Launches";
 
 export default function AppRoutes() {
   return (
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/launches" element={<LaunchesPage />} />
         {/* <Route path="/transactions" element={<TransactionsPage />} />
         <Route path="/commitments" element={<CommitmentsPage />} />
         <Route path="/accounts" element={<AccountsPage />} />

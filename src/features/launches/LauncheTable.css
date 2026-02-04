@@ -1,0 +1,67 @@
+.launch-table {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+/* HEADER */
+.launch-table-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.opening-balance {
+  color: var(--gray-700);
+  font-size: var(--font-body);
+}
+
+/* DAY GROUP */
+.day-group {
+  background-color: var(--white);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--gray-200);
+}
+
+/* DAY HEADER */
+.day-header {
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--gray-200);
+  font-weight: 600;
+}
+
+/* ROWS */
+.day-rows {
+  display: flex;
+  flex-direction: column;
+}
+
+/* ROW */
+.launch-row {
+  display: grid;
+  grid-template-columns: 2fr 2fr 2fr 1fr;
+  padding: var(--space-3);
+  border-bottom: 1px solid var(--gray-100);
+  font-size: var(--font-body);
+}
+
+.launch-row:last-child {
+  border-bottom: none;
+}
+
+.launch-row.income .col-value {
+  color: var(--success);
+}
+
+.launch-row.expense .col-value {
+  color: var(--danger);
+}
+
+/* DAY FOOTER */
+.day-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: var(--space-3);
+  border-top: 1px solid var(--gray-200);
+  font-weight: 600;
+}

@@ -3,13 +3,15 @@ import Button from "../../ui/Button/Button";
 import "./Header.css";
 import RevenueModal from "../../../features/revenue/RevenueModal";
 import ExpenseModal from '../../../features/expense/expenseModal';
-import TransferModal from '../../../features/transfer/transferModal';
+import TransferModal from '../../../features/transfer/TransferModal';
 
 type HeaderProps = {
   title?: string;
+  month?: string;
+  onMonthChange?: (month: string) => void;
 };
 
-export default function Header({ title = "Dashboard" }: HeaderProps) {
+export default function Header({ title = "Dashboard", month, onMonthChange }: HeaderProps) {
   const [openRevenue, setOpenRevenue] = useState(false);
   const [openExpense, setOpenExpense] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
@@ -23,10 +25,18 @@ export default function Header({ title = "Dashboard" }: HeaderProps) {
 
       {/* CENTER */}
       <div className="header-center">
-        <select className="header-select">
+        
+        {month && onMonthChange && (
+        <input className="header-select"
+          type="month"
+          value={month}
+          onChange={e => onMonthChange(e.target.value)}
+        />
+      )}
+        {/* <select className="header-select">
           <option>Janeiro / 2026</option>
           <option>Fevereiro / 2026</option>
-        </select>
+        </select> */}
       </div>
 
       {/* RIGHT */}

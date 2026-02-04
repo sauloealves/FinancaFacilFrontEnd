@@ -1,6 +1,6 @@
 export const menu = [
   { label: "Dashboard", path: "/dashboard" },
-  { label: "Lançamentos", path: "/transactions" },
+  { label: "Lançamentos", path: "/launches" },
   { label: "Compromissos", path: "/commitments" },
   { label: "Contas", path: "/accounts" },
   { label: "Orçamento", path: "/budget" },
