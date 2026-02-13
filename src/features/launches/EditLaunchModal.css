@@ -1,0 +1,169 @@
+/* ===== OVERLAY ===== */
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+
+  background: rgba(0, 0, 0, 0.35);
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  z-index: 1000;
+
+  animation: fadeIn 0.2s ease;
+}
+
+/* ===== MODAL ===== */
+
+.modal {
+  width: 1100px;      
+  max-width: 95%;
+
+  background: #fff;
+  border-radius: 12px;
+
+  padding: 24px;
+
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.15);
+
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: scaleIn 0.2s ease;
+}
+
+/* ===== TAGS ===== */
+
+.tags {
+  display: flex;
+  gap: 8px;
+}
+
+.tag {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+
+.tag.expense {
+  background: rgba(220, 53, 69, 0.1);
+  color: #dc3545;
+}
+
+.tag.income {
+  background: rgba(40, 167, 69, 0.1);
+  color: #28a745;
+}
+
+.tag.transfer {
+  background: rgba(108, 117, 125, 0.1);
+  color: #6c757d;
+}
+
+.tag.active {
+  box-shadow: 0 0 0 2px currentColor;
+}
+
+/* ===== FORM ===== */
+
+.form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 12px;
+}
+
+.form-row input,
+.form-row select {
+  height: 40px;
+  padding: 0 10px;
+
+  border-radius: 6px;
+  border: 1px solid #ddd;
+
+  font-size: 14px;
+
+  transition: 0.2s ease;
+}
+
+.form-row input:focus,
+.form-row select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.15);
+}
+
+/* ===== FOOTER ===== */
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.btn-cancelar {
+  background: #f2f2f2;
+  border: none;
+
+  padding: 8px 16px;
+  border-radius: 6px;
+
+  cursor: pointer;
+  font-weight: 500;
+
+  transition: 0.2s ease;
+}
+
+.btn-cancelar:hover {
+  background: #e5e5e5;
+}
+
+.btn-salvar {
+  background: #007bff;
+  color: white;
+
+  border: none;
+  padding: 8px 18px;
+  border-radius: 6px;
+
+  cursor: pointer;
+  font-weight: 600;
+
+  transition: 0.2s ease;
+}
+
+.btn-salvar:hover {
+  background: #0069d9;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.btn-salvar:disabled {
+  background: #b5c7e3;
+  cursor: not-allowed;
+}
+
+.invalid {
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 2px rgba(220, 53, 69, 0.15);
+}

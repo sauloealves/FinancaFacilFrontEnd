@@ -1,16 +1,14 @@
-import type { DayGroup as DayGroupType } from "./types";
+import type { DayGroup as DayGroupType, LaunchRow as LaunchRowType } from "./types";
 import { formatDateBR } from "../../utils/date";
-
-
-
 import LaunchRow from "./LaunchRow";
 
 type DayGroupProps = {
-  day: DayGroupType;
+    day: DayGroupType;
+    onEdit: (row: LaunchRowType) => void;
 };
 
-export default function DayGroup({ day }: DayGroupProps) {
-  return (
+export default function DayGroup({ day, onEdit }: DayGroupProps) {
+  return (  
     <div className="day-group">
       {/* HEADER DO DIA */}
       <div className="day-header">
@@ -22,7 +20,14 @@ export default function DayGroup({ day }: DayGroupProps) {
       {/* LANÇAMENTOS DO DIA */}
       <div className="day-rows">
         {day.rows.map(row => (
-          <LaunchRow key={row.id} row={row} />
+          <LaunchRow 
+            key={row.id}
+            row={row}
+            onEdit={(row) => {
+              onEdit(row);
+              console.log("Editando linha", row);
+            }}
+            />
         ))}
       </div>
 

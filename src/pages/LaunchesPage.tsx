@@ -1,9 +1,9 @@
 import { useState } from "react";
 import LaunchTable from "../features/launches/LauncheTable";
 import { normalizeLaunches } from "../features/launches/normalizeLaunches";
-import type { LaunchRow } from "../features/launches/types";
-import { formatMonthBR } from "../utils/date";
+import type { LaunchRow, LaunchRow as LaunchRowType } from "../features/launches/types";
 import { usePeriod } from "../contexts/usePeriodo";
+import EditLaunchModal from "../features/launches/EditLaunchModal";
 
 
 /**
@@ -12,6 +12,8 @@ import { usePeriod } from "../contexts/usePeriodo";
  */
 export default function LaunchesPage() {
   const { month } = usePeriod();
+  const [editing, setEditing] = useState<LaunchRow | null>(null);
+
 
   const openingBalanceByMonth: Record<string, number> = {
     "2026-01": 3000,
@@ -19,7 +21,7 @@ export default function LaunchesPage() {
   };
   // 🔧 MOCK (temporário)  
 
-const launches: LaunchRow[] = [
+const [launches, setLaunches] = useState<LaunchRowType[]>([
   {
     id: "1",
     date: "2026-02-01",
@@ -56,8 +58,15 @@ const launches: LaunchRow[] = [
     fromAccount: { id: "1", name: "Conta Corrente" },
     toAccount: { id: "3", name: "Poupança" },
   },
-];
-
+  {
+    id: "5",
+    date: "2026-01-01",
+    description: "Salario V.A.L.E",
+    type: "income",
+    value: 300,
+    account: { id: "1", name: "Conta Corrente" },
+  },
+]);
 
   const tableData = normalizeLaunches({
     month: month,
@@ -67,7 +76,26 @@ const launches: LaunchRow[] = [
 
   return (
     <div className="launches-page">
-      <LaunchTable data={tableData} />
+      <LaunchTable data={tableData} 
+        onEdit={row => setEditing(row)}
+      />
+      {editing && (
+      <EditLaunchModal
+        launch={editing}
+        onClose={() => setEditing(null)}
+        onSave={(updated) => {
+          setLaunches(prev =>
+            prev.map(l =>
+              l.id === updated.id ? updated : l
+            )
+          );
+          setEditing(null);
+        }}
+      />
+    )}
+
     </div>
   );
 }
+
+

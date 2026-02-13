@@ -1,0 +1,148 @@
+/* Valor - modo leitura */
+.value-display {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.value-display:hover {
+  background-color: var(--gray-100);
+}
+
+/* Valor - modo edição */
+.value-input {
+  width: 100%;
+  max-width: 120px;
+  padding: 4px 6px;
+
+  font-size: inherit;
+  font-family: inherit;
+  /*text-align: right;*/
+
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+
+  outline: none;
+}
+
+.value-input:focus {
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.2);
+}
+/*
+.description-display {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.description-display:hover {
+  background-color: var(--gray-100);
+}
+
+.description-input {
+  width: 100%;
+  padding: 4px 6px;
+
+  font-size: inherit;
+  font-family: inherit;
+
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+
+  outline: none;
+}*/
+
+.category-display {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.category-display:hover {
+  background-color: var(--gray-100);
+}
+
+.category-select {
+  width: 100%;
+  padding: 4px 6px;
+
+  font-size: inherit;
+  font-family: inherit;
+
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+
+  outline: none;
+}
+
+.account-display {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.account-display:hover {
+  background-color: var(--gray-100);
+}
+
+.account-select {
+  width: 100%;
+  padding: 4px 6px;
+
+  font-size: inherit;
+  font-family: inherit;
+
+  border: 1px solid var(--primary);
+  border-radius: 4px;
+
+  outline: none;
+}
+
+.type-badge {
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.type-badge.income {
+  background-color: rgba(40, 167, 69, 0.1);
+  color: var(--success);
+}
+
+.type-badge.expense {
+  background-color: rgba(220, 53, 69, 0.1);
+  color: var(--danger);
+}
+
+.type-badge.transfer {
+  background-color: rgba(108, 117, 125, 0.1);
+  color: var(--gray-700);
+}
+
+.type-select {
+  font-size: inherit;
+  padding: 4px;
+}
+.transfer-inline {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.transfer-display {
+  cursor: pointer;
+  padding: 2px 4px;
+  border-radius: 4px;
+}
+
+.transfer-display:hover {
+  background-color: var(--gray-100);
+}
+
+.arrow {
+  font-weight: bold;
+}
+
+
