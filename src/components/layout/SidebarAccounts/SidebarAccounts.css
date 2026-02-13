@@ -1,0 +1,29 @@
+.sidebar-account-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+
+  padding: 6px 8px;
+  border-radius: 6px;
+
+  color: white;
+
+  cursor: pointer;
+  transition: 0.15s ease;
+}
+
+.sidebar-account-item:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.sidebar-account-item.active {
+  background: rgba(59, 130, 246, 0.2);
+}
+
+.account-name {
+  flex: 1;
+}
+
+.account-balance {
+  font-weight: 600;
+}

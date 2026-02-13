@@ -2,9 +2,14 @@ import { NavLink } from "react-router-dom";
 import { menu } from "../../../app/config/menu";
 import "./Sidebar.css";
 import { useNavigate } from "react-router-dom";
+import { useAccountFilter } from "../../../contexts/AccountFilterContext";
+import SidebarAccounts from "../SidebarAccounts/SidebarAccounts";
 
 
 export default function Sidebar() {
+  const { selectedAccounts, toggleAccount } = useAccountFilter();
+
+  
 
   const navigate = useNavigate();
   function logout() {
@@ -36,7 +41,12 @@ export default function Sidebar() {
         >
           Sair
         </button>
-      </nav>
+      </nav>   
+      <div className="sidebar-divider" />
+        <div className="sidebar-accounts">
+        <SidebarAccounts  />
+      </div>
+      
     </aside>
   );
 }

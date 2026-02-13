@@ -1,4 +1,4 @@
-import { useEffect, useState, ref, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import "./EditLaunchModal.css";
 import type { LaunchRow } from "./types";
 import { formatBRLInputSigned, maskBRLInput, parseBRL } from "../../utils/currency";
@@ -24,12 +24,6 @@ export default function EditLaunchModal({
     const [fromAccount, setFromAccount] = useState(launch.fromAccount?.id ?? "");
     const [toAccount, setToAccount] = useState(launch.toAccount?.id ?? "");
 
-    const dateRef = useRef<HTMLInputElement>(null);
-    const descriptionRef = useRef<HTMLInputElement>(null);
-    const categoryRef = useRef<HTMLSelectElement>(null);
-    const accountRef = useRef<HTMLSelectElement>(null);
-    const fromRef = useRef<HTMLSelectElement>(null);
-    const toRef = useRef<HTMLSelectElement>(null);
     const valueRef = useRef<HTMLInputElement>(null);
 
 
@@ -184,6 +178,7 @@ export default function EditLaunchModal({
             )}
 
             <input
+                ref={valueRef}
                 type="text"
                 placeholder="Valor"
                 value={value}
