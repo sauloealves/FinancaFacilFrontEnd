@@ -7,6 +7,7 @@ import ForgotPassword from "../pages/auth/ForgotPassword";
 import AppLayout from "../components/layout/AppLayout/AppLayout";
 import DashboardPage from "../pages/Dashboard";
 import LaunchesPage from "../pages/LaunchesPage";
+import AccountsPage from "../pages/AccountsPage";
 
 export default function AppRouter() {
   return (
@@ -25,7 +26,8 @@ export default function AppRouter() {
           <Route path="/" element={<DashboardPage />} />
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/launches" element={<LaunchesPage />} />
-          {/* outras páginas */}
+          <Route path="/accounts" element={<AccountsPage />} />
+          
         </Route>
       </Routes>
     </BrowserRouter>
