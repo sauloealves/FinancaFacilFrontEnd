@@ -1,83 +1,118 @@
-import { useEffect, useState } from "react";
-import { getAccounts } from "../services/accountService";
-import { formatBRLInputSigned } from "../utils/currency";
-import { useLaunches } from "../contexts/launches/useLaunches";
+import { useState } from "react";
+import {
+  createAccount,
+  updateAccount,
+  deleteAccount
+} from "../services/accountService";
+import AccountModal from "../features/accounts/components/AccountModal";
+import AccountTable from "../features/accounts/components/AccountTable";
 import type { Account } from "../features/accounts/types";
 import { calculateAccountCurrentBalance } from "../utils/calculateAccountCurrentBalance";
+import { useAccounts } from "../contexts/accounts/useAccounts";
+import { useLaunches } from "../contexts/launches/useLaunches";
 import "./AccountsPage.css";
 
 export default function AccountsPage() {
-  const [accounts, setAccounts] = useState<Account[]>([]);
-  const [loading, setLoading] = useState(true);
+
+  const {
+  accounts,
+  addAccount,
+  editAccount,
+  removeAccount,
+  reloadAccounts
+} = useAccounts();
 
   const { launches } = useLaunches();
 
-  useEffect(() => {
-    async function loadAccounts() {
-        setLoading(true);
-        const data = await getAccounts();
-        setAccounts(data);
-        setLoading(false);
+  const [editing, setEditing] =
+    useState<Account | null>(null);
+
+  const [showModal, setShowModal] =
+    useState(false);
+
+  const balances = Object.fromEntries(
+    accounts.map((a) => [
+      a.id,
+      calculateAccountCurrentBalance(a, launches),
+    ])
+  );
+
+  async function handleSave(data: {
+    name: string;
+    initialBalance: number;
+  }) {
+    try {
+      if (editing) {
+        const updated = await updateAccount(
+          editing.id,
+          data
+        );
+
+        editAccount(updated);
+
+      } else {
+        const created =
+          await createAccount(data);
+
+        addAccount(created);
+      }
+
+      await reloadAccounts();
+      setShowModal(false);
+      setEditing(null);
     }
+    catch (error) {
+      console.log(error);
+      alert("Ocorreu um erro ao salvar a conta.");
+    }
+  }
 
-    loadAccounts();
-   }, []);
+  async function handleDelete(id: string) {
+    if (!confirm("Deseja excluir esta conta?")) return;
 
-  if (loading) return <div>Carregando...</div>;
+    try {
+      await deleteAccount(id);
+      removeAccount(id);
+    } catch {
+      alert("Erro ao excluir conta.");
+    }
+  }
 
   return (
     <div className="accounts-page">
-      <h2>Contas</h2>
+      <div className="page-header">
+        <h2>Contas</h2>
 
-      <table className="accounts-table">
-        <thead>
-          <tr>
-            <th>Nome</th>
-            <th>Saldo Inicial</th>
-            <th>Saldo Atual</th>
-            <th>Ações</th>
-          </tr>
-        </thead>
+        <button className="btn-primary"
+          onClick={() => {
+            setEditing(null);
+            setShowModal(true);
+          }}
+        >
+          + Nova Conta
+        </button>
+      </div>
 
-        <tbody>
-          {accounts.map(account => {
-            const currentBalance =
-              calculateAccountCurrentBalance(
-                account,
-                launches
-              );
+      <AccountTable
+        accounts={accounts}
+        balances={balances}
+        onEdit={(account) => {
+          setEditing(account);
+          setShowModal(true);
+        }}
+        onDelete={handleDelete}
+      />
 
-            return (
-              <tr key={account.id}>
-                <td>{account.name}</td>
-
-                <td>
-                  {formatBRLInputSigned(
-                    account.initialBalance
-                  )}
-                </td>
-
-                <td
-                  className={
-                    currentBalance < 0
-                      ? "negative"
-                      : ""
-                  }
-                >
-                  {formatBRLInputSigned(
-                    currentBalance
-                  )}
-                </td>
-
-                <td>
-                  {/* Depois colocamos Edit / Delete */}
-                  -
-                </td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
+      {showModal && (
+        <AccountModal
+          account={editing}
+          onClose={() => {
+            setShowModal(false);
+            setEditing(null);
+          }}
+          onSave={handleSave}
+        />
+      )}
     </div>
   );
-}
+} 

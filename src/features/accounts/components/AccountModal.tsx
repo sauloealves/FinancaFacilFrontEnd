@@ -1,0 +1,107 @@
+import { useState, useEffect, useRef } from "react";
+import type { Account } from "../types";
+
+type Props = {
+    account?: Account | null;
+    onClose: () => void;
+    onSave: (data: {
+        name: string;
+        initialBalance: number;
+    }) => void;
+};
+
+export default function AccountModal({
+    account,
+    onClose,
+    onSave,
+}: Props) {
+    const [name, setName] = useState("");
+    const [initialBalance, setInitialBalance] = useState(0);
+    const initialFocusRef = useRef<HTMLInputElement>(null);
+
+    useEffect(() => {
+        requestAnimationFrame(() => {
+            initialFocusRef.current?.focus();
+            initialFocusRef.current?.select();
+        });
+    }, []);
+
+    useEffect(() => {
+        if (account) {
+            setName(account.name);
+            setInitialBalance(account.initialBalance);
+        }
+    }, [account]);
+
+    useEffect(() => {
+        function handleKeyDown(e: KeyboardEvent) {
+            if (e.key === "Escape") {
+                onClose();
+            }
+        }
+
+        window.addEventListener("keydown", handleKeyDown);
+
+        return () => {
+            window.removeEventListener("keydown", handleKeyDown);
+        };
+    }, [onClose]);
+
+    const valid = name.trim().length > 0;
+
+    return (
+        <div
+            className="modal-overlay"
+            onClick={(e) => {
+                if (e.target === e.currentTarget) onClose();
+            }}
+        >
+            <div className="modal">
+
+                <h3>
+                    {account ? "Editar Conta" : "Nova Conta"}
+                </h3>
+
+                <div className="form-row">
+                    <input
+                        ref={initialFocusRef}
+                        type="text"
+                        placeholder="Nome da Conta"
+                        value={name}
+                        onChange={(e) => setName(e.target.value)}
+                    />
+
+                    <input
+                        type="number"
+                        placeholder="Saldo Inicial"
+                        value={initialBalance}
+                        onChange={(e) =>
+                            setInitialBalance(Number(e.target.value))
+                        }
+                    />
+                </div>
+
+                <div className="modal-footer">
+                    <button
+                        type="button"
+                        className="btn-cancelar"
+                        onClick={onClose}
+                    >
+                        Cancelar
+                    </button>
+
+                    <button
+                        type="button"
+                        className="btn-salvar"
+                        disabled={!valid}
+                        onClick={() =>
+                            onSave({ name, initialBalance })
+                        }
+                    >
+                        Salvar
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}

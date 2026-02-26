@@ -8,6 +8,8 @@ import AppLayout from "../components/layout/AppLayout/AppLayout";
 import DashboardPage from "../pages/Dashboard";
 import LaunchesPage from "../pages/LaunchesPage";
 import AccountsPage from "../pages/AccountsPage";
+import { AccountFilterProvider } from "../contexts/AccountFilterContext";
+import { AccountsProvider } from '../contexts/accounts/AccountsProvider';
 
 export default function AppRouter() {
   return (
@@ -19,7 +21,11 @@ export default function AppRouter() {
         <Route
           element={
             <PrivateRoute>
-              <AppLayout />
+              <AccountsProvider>
+                <AccountFilterProvider>
+                  <AppLayout />
+                </AccountFilterProvider>
+              </AccountsProvider>
             </PrivateRoute>
           }
         >

@@ -1,7 +1,7 @@
 import { Routes, Route } from "react-router-dom";
 import AppLayout from "../../components/layout/AppLayout/AppLayout";
 import DashboardPage from "../../pages/Dashboard";
-import LaunchesPage from "../../pages/Launches";
+import LaunchesPage from "../../pages/LaunchesPage";
 
 export default function AppRoutes() {
   return (

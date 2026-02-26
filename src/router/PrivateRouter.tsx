@@ -1,13 +1,25 @@
-import { Navigate } from "react-router-dom";
-import { isAuthenticated } from "../hooks/useAuth";
-import type { JSX } from "react/jsx-dev-runtime";
+  
+import { Navigate, useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/auth/AuthContext";
+import type { JSX } from "react";
 
-type Props = {
+export default function PrivateRoute({
+  children,
+}: Readonly<{
   children: JSX.Element;
-};
+}>) {
+  const { isAuthenticated } = useAuth();
+  const location = useLocation();
 
-export default function PrivateRoute({ children }: Props) {
-  console.log("PrivateRoute: Checking authentication");
-  console.log("Is authenticated:", isAuthenticated());
-  return isAuthenticated() ? children : <Navigate to="/login" replace />;
+  if (!isAuthenticated) {
+    return (
+      <Navigate
+        to="/login"
+        state={{ from: location }}
+        replace
+      />
+    );
+  }
+
+  return children;
 }
