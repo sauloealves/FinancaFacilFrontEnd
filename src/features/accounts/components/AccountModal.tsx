@@ -63,22 +63,28 @@ export default function AccountModal({
                 </h3>
 
                 <div className="form-row">
-                    <input
-                        ref={initialFocusRef}
-                        type="text"
-                        placeholder="Nome da Conta"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                    />
+                    <div className="form-field">
+                        <label>Nome da Conta</label>
+                        <input
+                            ref={initialFocusRef}
+                            type="text"
+                            placeholder="Nome da Conta"
+                            value={name}
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </div>
 
-                    <input
-                        type="number"
-                        placeholder="Saldo Inicial"
-                        value={initialBalance}
-                        onChange={(e) =>
-                            setInitialBalance(Number(e.target.value))
-                        }
-                    />
+                    <div className="form-field">
+                        <label>Saldo Inicial</label>
+                        <input
+                            type="number"
+                            placeholder="Saldo Inicial"
+                            value={initialBalance}
+                            onChange={(e) =>
+                                setInitialBalance(Number(e.target.value))
+                            }
+                        />
+                    </div>
                 </div>
 
                 <div className="modal-footer">

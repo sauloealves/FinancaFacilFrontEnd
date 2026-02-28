@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Modal, Input, Button } from "../../components/ui";
-import "./ExpenseModal.css";
+//import "./ExpenseModal.css";
 
 type ExpenseModalProps = {
   isOpen: boolean;
