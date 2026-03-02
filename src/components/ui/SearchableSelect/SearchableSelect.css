@@ -1,0 +1,130 @@
+.searchable-select-container {
+  position: relative;
+  width: 100%;
+}
+
+.searchable-select-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin-bottom: 6px;
+}
+
+.searchable-select-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.searchable-select-input {
+  width: 100%;
+  padding: 8px 32px 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  background: white;
+  cursor: text;
+  transition: border-color 0.2s ease;
+}
+
+.searchable-select-input:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.searchable-select-input:disabled {
+  background: #f3f4f6;
+  color: #999;
+  cursor: not-allowed;
+}
+
+.searchable-select-clear {
+  position: absolute;
+  right: 32px;
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  cursor: pointer;
+  color: #999;
+  font-size: 16px;
+  transition: color 0.2s ease;
+}
+
+.searchable-select-clear:hover {
+  color: #333;
+}
+
+.searchable-select-arrow {
+  position: absolute;
+  right: 12px;
+  pointer-events: none;
+  color: #999;
+  font-size: 10px;
+}
+
+.searchable-select-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-top: none;
+  border-radius: 0 0 6px 6px;
+  margin-top: -1px;
+  max-height: 240px;
+  overflow-y: auto;
+  z-index: 100;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.searchable-select-option {
+  padding: 10px 12px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.15s ease;
+}
+
+.searchable-select-option:hover {
+  background-color: #f3f4f6;
+}
+
+.searchable-select-option.selected {
+  background-color: #e0e7ff;
+  color: #2563eb;
+  font-weight: 500;
+}
+
+.searchable-select-option.disabled {
+  color: #999;
+  cursor: not-allowed;
+  padding: 20px 12px;
+  text-align: center;
+}
+
+.searchable-select-option.empty-option {
+  border-bottom: 1px solid #eee;
+  color: #666;
+  font-style: italic;
+}
+
+/* Scrollbar customizado */
+.searchable-select-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.searchable-select-dropdown::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.searchable-select-dropdown::-webkit-scrollbar-thumb {
+  background: #ddd;
+  border-radius: 3px;
+}
+
+.searchable-select-dropdown::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}

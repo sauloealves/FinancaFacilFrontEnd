@@ -37,7 +37,7 @@ label {
 /* Inline small actions used next to selects (quick-create buttons) */
 .category-inline-actions {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
 }
 

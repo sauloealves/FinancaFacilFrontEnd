@@ -4,6 +4,7 @@ import type { LaunchRow } from "./types";
 import { useCategories } from "../../contexts/categories/useCategories";
 import { createCategory } from "../../services/categoryService";
 import CategoryModal from "../categories/CategoryModal";
+import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
 import { formatBRLInputSigned, maskBRLInput, parseBRL } from "../../utils/currency";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import AccountModal from "../accounts/components/AccountModal";
@@ -161,62 +162,63 @@ export default function EditLaunchModal({
 
             {type !== "transfer" && (
                 <>
-                <select
-                    className={`field-category ${!categoryId ? "invalid" : ""}`}
-                    value={categoryId}
-                    onChange={e => setCategoryId(e.target.value)}
-                >
-                    <option value="">Categoria</option>
-                    {categories.map(c => (
-                        <option key={c.id} value={c.id}>{c.name}</option>
-                    ))}
-                </select>
-                <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>+</button>
+                <div style={{display: 'inline-flex', gap: 8, alignItems: 'center'}}>
+                  <SearchableSelect
+                    label="Categoria"
+                    items={categories}
+                    selectedValue={categoryId}
+                    onSelect={setCategoryId}
+                    getLabel={(c) => {
+                      const parent = categories.find((p) => p.id === c.parentId);
+                      return parent ? `${parent.name} › ${c.name}` : c.name;
+                    }}
+                    getId={(c) => c.id}
+                    placeholder="Buscar categoria..."
+                  />
+                  <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>+</button>
+                </div>
 
                 <div style={{display: 'inline-flex', gap: 8, alignItems: 'center'}}>
-                <select
-                    className={`field-account ${!accountId ? "invalid" : ""}`}
-                    value={accountId}
-                    onChange={e => setAccountId(e.target.value)}
-                >
-                    <option value="">Conta</option>
-                    {accounts.map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                </select>
-                <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
+                  <SearchableSelect
+                    label="Conta"
+                    items={accounts}
+                    selectedValue={accountId}
+                    onSelect={setAccountId}
+                    getLabel={(a) => a.name}
+                    getId={(a) => a.id}
+                    placeholder="Buscar conta..."
+                  />
+                  <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
                 </div>
                 </>
             )}
 
             {type === "transfer" && (
                 <>
-                <div style={{display: 'inline-flex', gap: 8}}>
-                <select
-                    className={`field-account ${type === "transfer" && (!fromAccount || fromAccount === toAccount)? "invalid": ""}`}
-                    value={fromAccount}
-                    onChange={e => setFromAccount(e.target.value)}
-                >
-                    <option value="">De Conta</option>
-                    {accounts.map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                </select>
-                <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
+                <div style={{display: 'inline-flex', gap: 8, alignItems: 'center'}}>
+                  <SearchableSelect
+                    label="De Conta"
+                    items={accounts}
+                    selectedValue={fromAccount}
+                    onSelect={setFromAccount}
+                    getLabel={(a) => a.name}
+                    getId={(a) => a.id}
+                    placeholder="Buscar conta..."
+                  />
+                  <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
                 </div>
 
-                <div style={{display: 'inline-flex', gap: 8}}>
-                <select
-                    className={`field-account ${type === "transfer" && (!fromAccount || fromAccount === toAccount)? "invalid": ""}`}
-                    value={toAccount}
-                    onChange={e => setToAccount(e.target.value)}
-                >
-                    <option value="">Para Conta</option>
-                    {accounts.map(a => (
-                    <option key={a.id} value={a.id}>{a.name}</option>
-                    ))}
-                </select>
-                <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
+                <div style={{display: 'inline-flex', gap: 8, alignItems: 'center'}}>
+                  <SearchableSelect
+                    label="Para Conta"
+                    items={accounts}
+                    selectedValue={toAccount}
+                    onSelect={setToAccount}
+                    getLabel={(a) => a.name}
+                    getId={(a) => a.id}
+                    placeholder="Buscar conta..."
+                  />
+                  <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
                 </div>
                                 <div style={{display: 'inline-flex', alignItems: 'center', marginLeft: 8}}>
                                     <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>+</button>

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
 import { Modal, Input, Button } from "../../components/ui";
+import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
 import AccountModal from "../accounts/components/AccountModal";
 import CategoryModal from "../categories/CategoryModal";
 import { createCategory } from "../../services/categoryService";
@@ -170,38 +171,34 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
 
         {/* CONTA ORIGEM */}
         <div className="input-group">
-          <label>Conta origem</label>
           <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <select
-            className={`transfer-select ${errors.fromAccount ? "error" : ""}`}
-            value={form.fromAccount}
-            onChange={e => setForm({ ...form, fromAccount: e.target.value })}
-          >
-            <option value="">Selecione</option>
-            {accounts.map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-          <button type="button" className="btn-small" onClick={() => { setAccountTarget('from'); setShowAccountModal(true); }}>+</button>
+            <SearchableSelect
+              label="Conta origem"
+              items={accounts}
+              selectedValue={form.fromAccount}
+              onSelect={v => setForm({ ...form, fromAccount: v })}
+              getLabel={(a) => a.name}
+              getId={(a) => a.id}
+              placeholder="Buscar conta..."
+            />
+            <button type="button" className="btn-small" onClick={() => { setAccountTarget('from'); setShowAccountModal(true); }}>+</button>
           </div>
           {errors.fromAccount && <span className="input-error">{errors.fromAccount}</span>}
         </div>
 
         {/* CONTA DESTINO */}
         <div className="input-group">
-          <label>Conta destino</label>
           <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
-          <select
-            className={`transfer-select ${errors.toAccount ? "error" : ""}`}
-            value={form.toAccount}
-            onChange={e => setForm({ ...form, toAccount: e.target.value })}
-          >
-            <option value="">Selecione</option>
-            {accounts.map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-          </select>
-          <button type="button" className="btn-small" onClick={() => { setAccountTarget('to'); setShowAccountModal(true); }}>+</button>
+            <SearchableSelect
+              label="Conta destino"
+              items={accounts}
+              selectedValue={form.toAccount}
+              onSelect={v => setForm({ ...form, toAccount: v })}
+              getLabel={(a) => a.name}
+              getId={(a) => a.id}
+              placeholder="Buscar conta..."
+            />
+            <button type="button" className="btn-small" onClick={() => { setAccountTarget('to'); setShowAccountModal(true); }}>+</button>
           </div>
           {errors.toAccount && <span className="input-error">{errors.toAccount}</span>}
         </div>

@@ -1,6 +1,8 @@
 import { useState, useLayoutEffect, useRef } from "react";
 import { flushSync } from "react-dom";
 import type { Category } from "./types";
+import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
+import { sortCategoriesHierarchically } from "../../utils/sortUtils";
 import "./CategoryModal.css";
 
 type Props = {
@@ -51,14 +53,16 @@ export default function CategoryModal({
   }
 
   // Filtra categorias que podem ser pais (exclui a atual e seus descendentes)
-  const availableParents = categories.filter((c) => {
-    if (category?.id === c.id) return false;
-    if (category) {
-      const descendants = getDescendants(category.id);
-      return !descendants.has(c.id);
-    }
-    return true;
-  });
+  const availableParents = sortCategoriesHierarchically(
+    categories.filter((c) => {
+      if (category?.id === c.id) return false;
+      if (category) {
+        const descendants = getDescendants(category.id);
+        return !descendants.has(c.id);
+      }
+      return true;
+    })
+  );
 
   const valid = name.trim().length > 0;
 
@@ -86,19 +90,15 @@ export default function CategoryModal({
           </div>
 
           <div className="form-field">
-            <label htmlFor="category-parent">Categoria Pai (opcional)</label>
-            <select
-              id="category-parent"
-              value={parentId ?? ""}
-              onChange={(e) => setParentId(e.target.value || null)}
-            >
-              <option value="">Nenhuma</option>
-              {availableParents.map((c) => (
-                <option key={c.id} value={c.id}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
+            <SearchableSelect<Category>
+              label="Categoria Pai (opcional)"
+              items={availableParents}
+              selectedValue={parentId}
+              onSelect={setParentId}
+              getLabel={(c) => c.name}
+              getId={(c) => c.id}
+              placeholder="Buscar categoria pai..."
+            />
           </div>
         </div>
 

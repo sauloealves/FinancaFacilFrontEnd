@@ -100,7 +100,7 @@
 /* small + button next to select */
 .category-inline-actions {
   display: inline-flex;
-  align-items: center;
+  align-items: flex-end;
   gap: 8px;
 }
 

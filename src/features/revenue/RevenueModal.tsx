@@ -5,6 +5,8 @@ import { createCategory } from "../../services/categoryService";
 import CategoryModal from "../categories/CategoryModal";
 import AccountModal from "../accounts/components/AccountModal";
 import { Modal, Input, Button } from "../../components/ui";
+import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
+import { sortCategoriesHierarchically, sortAccountsAlphabetically } from "../../utils/sortUtils";
 import "./RevenueModal.css";
 
 type RevenueModalProps = {
@@ -223,28 +225,22 @@ export default function RevenueModal({
 
         {/* CATEGORIA */}
         <div className="input-group">
-            <label>Categoria</label>
             <div className="category-inline-actions">
-              <select
-                  className={`revenue-select ${errors.category ? "error" : ""}`}
-                  value={form.category}
-                  onChange={e => {
-                      const value = e.target.value;
-                      setForm({ ...form, category: value });
-                      validateField("category", value);
-                  }}
-              >
-                  <option value="">Selecione uma categoria</option>
-                  {categories.map((c) => {
-                    const parent = categories.find((p) => p.id === c.parentId);
-                    const label = parent ? `${parent.name} › ${c.name}` : c.name;
-                    return (
-                      <option key={c.id} value={c.id}>
-                        {label}
-                      </option>
-                    );
-                  })}
-              </select>
+              <SearchableSelect
+                label="Categoria"
+                items={sortCategoriesHierarchically(categories)}
+                selectedValue={form.category}
+                onSelect={v => {
+                  setForm({ ...form, category: v });
+                  validateField("category", v);
+                }}
+                getLabel={(c) => {
+                  const parent = categories.find((p) => p.id === c.parentId);
+                  return parent ? `${parent.name} › ${c.name}` : c.name;
+                }}
+                getId={(c) => c.id}
+                placeholder="Buscar categoria..."
+              />
 
               <button
                 type="button"
@@ -262,23 +258,20 @@ export default function RevenueModal({
 
         {/* CONTA */}
         <div className="input-group">
-            <label>Conta</label>
             <div className="category-inline-actions">
-            <select
-            className={`revenue-select ${errors.account ? "error" : ""}`}
-            value={form.account}
-            onChange={e => {
-                const v = e.target.value;
-                setForm({ ...form, account: v });
-                validateField("account", v);
-            }}
-            >
-            <option value="">Selecione uma conta</option>
-            {accounts.map(a => (
-              <option key={a.id} value={a.id}>{a.name}</option>
-            ))}
-            </select>
-            <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
+              <SearchableSelect
+                label="Conta"
+                items={sortAccountsAlphabetically(accounts)}
+                selectedValue={form.account}
+                onSelect={v => {
+                  setForm({ ...form, account: v });
+                  validateField("account", v);
+                }}
+                getLabel={(a) => a.name}
+                getId={(a) => a.id}
+                placeholder="Buscar conta..."
+              />
+              <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
             </div>
             {errors.account && (
             <span className="input-error">
