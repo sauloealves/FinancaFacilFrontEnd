@@ -1,5 +1,10 @@
 import { useState } from "react";
+import { useAccounts } from "../../contexts/accounts/useAccounts";
+import { useCategories } from "../../contexts/categories/useCategories";
 import { Modal, Input, Button } from "../../components/ui";
+import AccountModal from "../accounts/components/AccountModal";
+import CategoryModal from "../categories/CategoryModal";
+import { createCategory } from "../../services/categoryService";
 import "./TransferModal.css";
 
 type TransferModalProps = {
@@ -14,6 +19,7 @@ type FormState = {
   value: string;
   fromAccount: string;
   toAccount: string;
+  category: string;
   startDate: string;
 
   installmentFrom: number;
@@ -27,12 +33,18 @@ type FormState = {
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
 export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
+  const { accounts, addAccount, reloadAccounts } = useAccounts();
+  const { categories, addCategory, reloadCategories } = useCategories();
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showAccountModal, setShowAccountModal] = useState(false);
+  const [accountTarget, setAccountTarget] = useState<"from" | "to" | null>(null);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
 
   const [form, setForm] = useState<FormState>({
     description: "",
     value: "",
+    category: "",
     fromAccount: "",
     toAccount: "",
     startDate: "",
@@ -92,6 +104,35 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
     onClose();
   }
 
+  async function handleCreateAccount(data: { name: string; initialBalance: number }) {
+    try {
+      const { createAccount } = await import("../../services/accountService");
+      const created = await createAccount(data);
+      addAccount(created);
+      await reloadAccounts();
+      setShowAccountModal(false);
+      if (accountTarget === 'from') setForm(prev => ({ ...prev, fromAccount: created.id }));
+      if (accountTarget === 'to') setForm(prev => ({ ...prev, toAccount: created.id }));
+      setAccountTarget(null);
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao criar conta");
+    }
+  }
+
+  async function handleCreateCategory(data: { name: string; parentId?: string | null }) {
+    try {
+      const created = await createCategory(data);
+      addCategory(created);
+      await reloadCategories();
+      setShowCategoryModal(false);
+      setForm(prev => ({ ...prev, category: created.id }));
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao criar categoria");
+    }
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -110,6 +151,7 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
           label="Descrição"
           value={form.description}
           error={errors.description}
+          autoFocus
           onChange={e => {
             const v = e.target.value;
             setForm({ ...form, description: v });
@@ -129,32 +171,38 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
         {/* CONTA ORIGEM */}
         <div className="input-group">
           <label>Conta origem</label>
+          <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
           <select
             className={`transfer-select ${errors.fromAccount ? "error" : ""}`}
             value={form.fromAccount}
             onChange={e => setForm({ ...form, fromAccount: e.target.value })}
           >
             <option value="">Selecione</option>
-            <option value="checking">Conta Corrente</option>
-            <option value="savings">Poupança</option>
-            <option value="wallet">Carteira</option>
+            {accounts.map(a => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
           </select>
+          <button type="button" className="btn-small" onClick={() => { setAccountTarget('from'); setShowAccountModal(true); }}>+</button>
+          </div>
           {errors.fromAccount && <span className="input-error">{errors.fromAccount}</span>}
         </div>
 
         {/* CONTA DESTINO */}
         <div className="input-group">
           <label>Conta destino</label>
+          <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
           <select
             className={`transfer-select ${errors.toAccount ? "error" : ""}`}
             value={form.toAccount}
             onChange={e => setForm({ ...form, toAccount: e.target.value })}
           >
             <option value="">Selecione</option>
-            <option value="checking">Conta Corrente</option>
-            <option value="savings">Poupança</option>
-            <option value="wallet">Carteira</option>
+            {accounts.map(a => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
           </select>
+          <button type="button" className="btn-small" onClick={() => { setAccountTarget('to'); setShowAccountModal(true); }}>+</button>
+          </div>
           {errors.toAccount && <span className="input-error">{errors.toAccount}</span>}
         </div>
 
@@ -232,6 +280,21 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
             />
           )}
         </div>
+      )}
+      {showAccountModal && (
+        <AccountModal
+          account={null}
+          onClose={() => { setShowAccountModal(false); setAccountTarget(null); }}
+          onSave={handleCreateAccount}
+        />
+      )}
+      {showCategoryModal && (
+        <CategoryModal
+          category={null}
+          categories={categories}
+          onClose={() => setShowCategoryModal(false)}
+          onSave={handleCreateCategory}
+        />
       )}
     </Modal>
   );

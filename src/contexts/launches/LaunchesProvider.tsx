@@ -1,15 +1,35 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { LaunchesContext } from "./LaunchesContext";
 import type { LaunchRow } from "../../features/launches/types";
-import { launches as mockLaunches } from "../../data/launches";
+import api from "../../services/api";
 
 export function LaunchesProvider({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const [launches, setLaunches] =
-    useState<LaunchRow[]>(mockLaunches);
+  const [launches, setLaunches] = useState<LaunchRow[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    api
+      .get<LaunchRow[]>('/launches')
+      .then(({ data }) => {
+        if (mounted) setLaunches(data || []);
+      })
+      .catch(() => {
+        if (mounted) setLaunches([]);
+      })
+      .finally(() => {
+        if (mounted) setLoading(false);
+      });
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   function updateLaunch(updated: LaunchRow) {
     setLaunches(prev =>

@@ -6,5 +6,6 @@ export const menu = [
   { label: "Orçamento", path: "/budget" },
   { label: "Relatórios", path: "/reports" },
   { label: "Integrações", path: "/integrations" },
-  { label: "Configurações", path: "/settings/profile" }
+  { label: "Configurações", path: "/settings/profile" },
+  { label: "Categorias", path: "/categories" }
 ];

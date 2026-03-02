@@ -10,6 +10,8 @@ import LaunchesPage from "../pages/LaunchesPage";
 import AccountsPage from "../pages/AccountsPage";
 import { AccountFilterProvider } from "../contexts/AccountFilterContext";
 import { AccountsProvider } from '../contexts/accounts/AccountsProvider';
+import { CategoriesProvider } from '../contexts/categories/CategoriesProvider';
+import CategoriesPage from "../pages/CategoriesPage";
 
 export default function AppRouter() {
   return (
@@ -22,10 +24,12 @@ export default function AppRouter() {
           element={
             <PrivateRoute>
               <AccountsProvider>
-                <AccountFilterProvider>
-                  <AppLayout />
-                </AccountFilterProvider>
-              </AccountsProvider>
+                  <CategoriesProvider>
+                    <AccountFilterProvider>
+                      <AppLayout />
+                    </AccountFilterProvider>
+                  </CategoriesProvider>
+                </AccountsProvider>
             </PrivateRoute>
           }
         >
@@ -33,6 +37,7 @@ export default function AppRouter() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/launches" element={<LaunchesPage />} />
           <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/categories" element={<CategoriesPage />} />
           
         </Route>
       </Routes>

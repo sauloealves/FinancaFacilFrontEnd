@@ -24,11 +24,7 @@ label {
   font-weight: 500;
   color: var(--gray-700);
 }
-/* Form field layout: label above input */
-.form-field label {
-  display: block;
-  margin-bottom: 6px;
-}
+
 .auth-message {
   background: #fee2e2;
   color: #991b1b;
@@ -36,4 +32,69 @@ label {
   border-radius: 6px;
   margin-bottom: 10px;
   font-size: 14px;
+}
+
+/* Inline small actions used next to selects (quick-create buttons) */
+.category-inline-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-small {
+  padding: 6px 8px;
+  border-radius: 6px;
+  border: none;
+  background: #10b981;
+  color: white;
+  cursor: pointer;
+  font-weight: 600;
+  height: 32px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.btn-small:hover { background: #059669 }
+
+.btn-small:active { transform: scale(0.98) }
+
+/* Select styles for modals */
+.expense-select,
+.revenue-select,
+.transfer-select,
+.field-account,
+.field-category,
+.field-date,
+.field-description,
+.field-value {
+  padding: 8px 10px;
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  background: white;
+  font-size: 14px;
+  color: var(--gray-900);
+  min-height: 36px;
+}
+
+.expense-select.error,
+.revenue-select.error,
+.transfer-select.error,
+.field-account.invalid,
+.field-category.invalid,
+.field-date.invalid,
+.field-description.invalid,
+.field-value.invalid {
+  border-color: #f87171;
+  box-shadow: 0 0 0 3px rgba(248, 113, 113, 0.06);
+}
+
+.expense-select:focus,
+.revenue-select:focus,
+.transfer-select:focus,
+.field-account:focus,
+.field-category:focus {
+  outline: none;
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }

@@ -6,6 +6,7 @@ type InputProps = {
   value: string;
   placeholder?: string;
   error?: string;
+  autoFocus?: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
 };
 
@@ -15,6 +16,7 @@ export default function Input({
   value,
   placeholder,
   error,
+  autoFocus = false,
   onChange,
 }: Readonly<InputProps>) {
   return (
@@ -24,7 +26,8 @@ export default function Input({
         type={type}
         value={value}
         placeholder={placeholder}
-        onChange={onChange}        
+        onChange={onChange}
+        autoFocus={autoFocus}
       />
       {error && <span className="input-error">{error}</span>}
     </div>

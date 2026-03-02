@@ -1,7 +1,13 @@
 import { useEffect, useState, useRef } from "react";
 import "./EditLaunchModal.css";
 import type { LaunchRow } from "./types";
+import { useCategories } from "../../contexts/categories/useCategories";
+import { createCategory } from "../../services/categoryService";
+import CategoryModal from "../categories/CategoryModal";
 import { formatBRLInputSigned, maskBRLInput, parseBRL } from "../../utils/currency";
+import { useAccounts } from "../../contexts/accounts/useAccounts";
+import AccountModal from "../accounts/components/AccountModal";
+
 
 type Props = {
   launch: LaunchRow;
@@ -23,6 +29,10 @@ export default function EditLaunchModal({
     const [accountId, setAccountId] = useState(launch.account?.id ?? "");
     const [fromAccount, setFromAccount] = useState(launch.fromAccount?.id ?? "");
     const [toAccount, setToAccount] = useState(launch.toAccount?.id ?? "");
+    const { categories, addCategory, reloadCategories } = useCategories();
+    const { accounts, addAccount, reloadAccounts } = useAccounts();
+    const [showCategoryModal, setShowCategoryModal] = useState(false);
+    const [showAccountModal, setShowAccountModal] = useState(false);
 
     const valueRef = useRef<HTMLInputElement>(null);
 
@@ -44,6 +54,10 @@ export default function EditLaunchModal({
     };
     }, [onClose]);
 
+    useEffect(() => {
+      // keep compatibility if needed; accounts come from context
+    }, []);
+
     function handleSave() {
         const updated: LaunchRow = {
         ...launch,
@@ -56,13 +70,17 @@ export default function EditLaunchModal({
         if (type === "transfer") {
         updated.account = undefined;
         updated.category = undefined;
-        updated.fromAccount = { id: fromAccount, name: "" };
-        updated.toAccount = { id: toAccount, name: "" };
+        const fa = accounts.find((a) => a.id === fromAccount);
+        const ta = accounts.find((a) => a.id === toAccount);
+        updated.fromAccount = { id: fromAccount, name: fa?.name ?? "" };
+        updated.toAccount = { id: toAccount, name: ta?.name ?? "" };
         } else {
         updated.fromAccount = undefined;
         updated.toAccount = undefined;
-        updated.account = { id: accountId, name: "" };
-        updated.category = { id: categoryId, name: "" };
+        const acc = accounts.find((a) => a.id === accountId);
+        updated.account = { id: accountId, name: acc?.name ?? "" };
+        const cat = categories.find((c) => c.id === categoryId);
+        updated.category = { id: categoryId, name: cat?.name ?? "" };
         }
 
         onSave(updated);
@@ -88,6 +106,18 @@ export default function EditLaunchModal({
     }
 
     const valid = isValid();
+
+        async function handleCreateCategory(data: { name: string; parentId?: string | null }) {
+            try {
+                const created = await createCategory(data);
+                addCategory(created);
+                await reloadCategories();
+                setShowCategoryModal(false);
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao criar categoria");
+            }
+        }
 
     return (
         <div className="modal-overlay" 
@@ -132,48 +162,65 @@ export default function EditLaunchModal({
             {type !== "transfer" && (
                 <>
                 <select
-                    className={`field-category ${type !== "transfer" && !categoryId ? "invalid" : ""}`}
+                    className={`field-category ${!categoryId ? "invalid" : ""}`}
                     value={categoryId}
                     onChange={e => setCategoryId(e.target.value)}
                 >
                     <option value="">Categoria</option>
-                    <option value="food">Alimentação</option>
-                    <option value="salary">Salário</option>
+                    {categories.map(c => (
+                        <option key={c.id} value={c.id}>{c.name}</option>
+                    ))}
                 </select>
+                <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>+</button>
 
+                <div style={{display: 'inline-flex', gap: 8, alignItems: 'center'}}>
                 <select
-                    className={`field-account ${type !== "transfer" && !accountId ? "invalid" : ""}`}
+                    className={`field-account ${!accountId ? "invalid" : ""}`}
                     value={accountId}
                     onChange={e => setAccountId(e.target.value)}
                 >
                     <option value="">Conta</option>
-                    <option value="cc">Conta Corrente</option>
-                    <option value="card">Cartão</option>
+                    {accounts.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
                 </select>
+                <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
+                </div>
                 </>
             )}
 
             {type === "transfer" && (
                 <>
+                <div style={{display: 'inline-flex', gap: 8}}>
                 <select
                     className={`field-account ${type === "transfer" && (!fromAccount || fromAccount === toAccount)? "invalid": ""}`}
                     value={fromAccount}
                     onChange={e => setFromAccount(e.target.value)}
                 >
                     <option value="">De Conta</option>
-                    <option value="cc">Conta Corrente</option>
-                    <option value="savings">Poupança</option>
+                    {accounts.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
                 </select>
+                <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
+                </div>
 
+                <div style={{display: 'inline-flex', gap: 8}}>
                 <select
                     className={`field-account ${type === "transfer" && (!fromAccount || fromAccount === toAccount)? "invalid": ""}`}
                     value={toAccount}
                     onChange={e => setToAccount(e.target.value)}
                 >
                     <option value="">Para Conta</option>
-                    <option value="cc">Conta Corrente</option>
-                    <option value="savings">Poupança</option>
+                    {accounts.map(a => (
+                    <option key={a.id} value={a.id}>{a.name}</option>
+                    ))}
                 </select>
+                <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
+                </div>
+                                <div style={{display: 'inline-flex', alignItems: 'center', marginLeft: 8}}>
+                                    <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>+</button>
+                                </div>
                 </>
             )}
 
@@ -206,6 +253,28 @@ export default function EditLaunchModal({
                 Salvar
             </button>
             </div>
+
+            {showAccountModal && (
+                <AccountModal
+                  account={null}
+                  onClose={() => setShowAccountModal(false)}
+                  onSave={async (data) => {
+                    const { createAccount } = await import("../../services/accountService");
+                    const created = await createAccount(data);
+                    addAccount(created);
+                    await reloadAccounts();
+                    setShowAccountModal(false);
+                  }}
+                />
+            )}
+                        {showCategoryModal && (
+                                <CategoryModal
+                                    category={null}
+                                    categories={categories}
+                                    onClose={() => setShowCategoryModal(false)}
+                                    onSave={handleCreateCategory}
+                                />
+                        )}
 
         </div>
         </div>

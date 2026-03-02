@@ -1,6 +1,10 @@
 import { useState } from "react";
+import { useAccounts } from "../../contexts/accounts/useAccounts";
+import { useCategories } from "../../contexts/categories/useCategories";
+import { createCategory } from "../../services/categoryService";
+import CategoryModal from "../categories/CategoryModal";
 import { Modal, Input, Button } from "../../components/ui";
-//import "./ExpenseModal.css";
+import "./expenseModal.css";
 
 type ExpenseModalProps = {
   isOpen: boolean;
@@ -27,8 +31,12 @@ type FormState = {
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
 export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
+  const { accounts, addAccount, reloadAccounts } = useAccounts();
+  const { categories, addCategory, reloadCategories } = useCategories();
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showAccountModal, setShowAccountModal] = useState(false);
 
   const [form, setForm] = useState<FormState>({
     description: "",
@@ -129,6 +137,33 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
     onClose();
   }
 
+  async function handleCreateCategory(data: { name: string; parentId?: string | null }) {
+    try {
+      const created = await createCategory(data);
+      addCategory(created);
+      await reloadCategories();
+      setShowCategoryModal(false);
+      setForm(prev => ({ ...prev, category: created.id }));
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao criar categoria");
+    }
+  }
+
+  async function handleCreateAccount(data: { name: string; initialBalance: number }) {
+    try {
+      const { createAccount } = await import("../../services/accountService");
+      const created = await createAccount(data);
+      addAccount(created);
+      await reloadAccounts();
+      setShowAccountModal(false);
+      setForm(prev => ({ ...prev, account: created.id }));
+    } catch (err) {
+      console.error(err);
+      alert("Erro ao criar conta");
+    }
+  }
+
   return (
     <Modal
       isOpen={isOpen}
@@ -147,6 +182,7 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
           label="Descrição"
           value={form.description}
           error={errors.description}
+          autoFocus
           onChange={e => {
             const v = e.target.value;
             setForm({ ...form, description: v });
@@ -168,30 +204,44 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
         {/* CATEGORIA */}
         <div className="input-group">
           <label>Categoria</label>
-          <select
-            className={`expense-select ${errors.category ? "error" : ""}`}
-            value={form.category}
-            onChange={e => {
-              const v = e.target.value;
-              setForm({ ...form, category: v });
-              validateField("category", v);
-            }}
-          >
-            <option value="">Selecione uma categoria</option>
-            <option value="food">Alimentação</option>
-            <option value="housing">Moradia</option>
-            <option value="transport">Transporte</option>
-            <option value="health">Saúde</option>
-            <option value="education">Educação</option>
-            <option value="leisure">Lazer</option>
-            <option value="other">Outros</option>
-          </select>
+          <div className="category-inline-actions">
+            <select
+              className={`expense-select ${errors.category ? "error" : ""}`}
+              value={form.category}
+              onChange={e => {
+                const v = e.target.value;
+                setForm({ ...form, category: v });
+                validateField("category", v);
+              }}
+            >
+              <option value="">Selecione uma categoria</option>
+              {categories.map((c) => {
+                const parent = categories.find((p) => p.id === c.parentId);
+                const label = parent ? `${parent.name} › ${c.name}` : c.name;
+                return (
+                  <option key={c.id} value={c.id}>
+                    {label}
+                  </option>
+                );
+              })}
+            </select>
+
+            <button
+              type="button"
+              className="btn-small"
+              title="Nova categoria"
+              onClick={() => setShowCategoryModal(true)}
+            >
+              +
+            </button>
+          </div>
           {errors.category && <span className="input-error">{errors.category}</span>}
         </div>
 
         {/* CONTA */}
         <div className="input-group">
             <label>Conta</label>
+            <div className="category-inline-actions">
             <select
             className={`expense-select ${errors.account ? "error" : ""}`}
             value={form.account}
@@ -202,11 +252,12 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
             }}
             >
             <option value="">Selecione uma conta</option>
-            <option value="checking">Conta Corrente</option>
-            <option value="savings">Poupança</option>
-            <option value="wallet">Carteira</option>
-            <option value="credit">Conta Crédito</option>
+            {accounts.map(a => (
+              <option key={a.id} value={a.id}>{a.name}</option>
+            ))}
             </select>
+            <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
+            </div>
             {errors.account && (
             <span className="input-error">{errors.account}</span>
             )}
@@ -336,6 +387,29 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
             />
           )}
         </div>
+      )}
+      {showAccountModal && (
+        <AccountModal
+          account={null}
+          onClose={() => setShowAccountModal(false)}
+          onSave={handleCreateAccount}
+        />
+      )}
+      {showCategoryModal && (
+        <CategoryModal
+          category={null}
+          categories={categories}
+          onClose={() => setShowCategoryModal(false)}
+          onSave={handleCreateCategory}
+        />
+      )}
+      {showCategoryModal && (
+        <CategoryModal
+          category={null}
+          categories={categories}
+          onClose={() => setShowCategoryModal(false)}
+          onSave={handleCreateCategory}
+        />
       )}
     </Modal>
   );

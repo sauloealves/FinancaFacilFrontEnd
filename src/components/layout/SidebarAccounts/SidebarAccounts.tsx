@@ -1,17 +1,12 @@
 import { useAccountFilter } from "../../../contexts/AccountFilterContext";
 import { useAccounts } from "../../../contexts/accounts/useAccounts";
-
-import { launches } from "../../../data/launches";
-import { calculateAccountBalances } from "../../../features/accounts/calculateAccountBalances";
 import { formatBRLInputSigned } from "../../../utils/currency";
 import "./SidebarAccounts.css";
-
-
 
 export default function SidebarAccounts() {
   const { accounts } = useAccounts();
     const { selectedAccounts, toggleAccount } = useAccountFilter();
-    const balances = calculateAccountBalances(launches);
+    
 
   return (
     <div className="sidebar-accounts">
