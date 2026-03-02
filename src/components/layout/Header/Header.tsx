@@ -4,6 +4,7 @@ import "./Header.css";
 import RevenueModal from "../../../features/revenue/RevenueModal";
 import ExpenseModal from '../../../features/expense/expenseModal';
 import TransferModal from '../../../features/transfer/TransferModal';
+import { formatMonthBR } from "../../../utils/date";
 
 type HeaderProps = {
   title?: string;
@@ -11,10 +12,54 @@ type HeaderProps = {
   onMonthChange?: (month: string) => void;
 };
 
+function getNextMonth(monthStr: string): string {
+  const [year, month] = monthStr.split("-");
+  let nextMonth = parseInt(month) + 1;
+  let nextYear = parseInt(year);
+  if (nextMonth > 12) {
+    nextMonth = 1;
+    nextYear += 1;
+  }
+  return `${nextYear}-${String(nextMonth).padStart(2, "0")}`;
+}
+
+function getPreviousMonth(monthStr: string): string {
+  const [year, month] = monthStr.split("-");
+  let prevMonth = parseInt(month) - 1;
+  let prevYear = parseInt(year);
+  if (prevMonth < 1) {
+    prevMonth = 12;
+    prevYear -= 1;
+  }
+  return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
+}
+
 export default function Header({ title = "Dashboard", month, onMonthChange }: HeaderProps) {
   const [openRevenue, setOpenRevenue] = useState(false);
   const [openExpense, setOpenExpense] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
+  const [showMonthPicker, setShowMonthPicker] = useState(false);
+  
+  const currentYear = month ? parseInt(month.split("-")[0]) : new Date().getFullYear();
+  const currentMonth = month ? parseInt(month.split("-")[1]) : new Date().getMonth() + 1;
+  
+  const months = [
+    "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+    "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
+  ];
+  
+  const handleMonthSelect = (selectedMonth: number) => {
+    if (onMonthChange) {
+      onMonthChange(`${currentYear}-${String(selectedMonth).padStart(2, "0")}`);
+      setShowMonthPicker(false);
+    }
+  };
+  
+  const handleYearChange = (year: number) => {
+    if (onMonthChange) {
+      onMonthChange(`${year}-${String(currentMonth).padStart(2, "0")}`);
+    }
+  };
   
   return (
     <header className="header">
@@ -25,19 +70,78 @@ export default function Header({ title = "Dashboard", month, onMonthChange }: He
 
       {/* CENTER */}
       <div className="header-center">
-        
         {month && onMonthChange && (
-        <input className="header-select"
-          type="month"
-          value={month}
-          onChange={e => onMonthChange(e.target.value)}
+          <div className="month-navigator">
+            <button
+              className="month-btn"
+              onClick={() => onMonthChange(getPreviousMonth(month))}
+              title="Mês anterior"
+            >
+              ←
+            </button>
+            <div className="month-picker-wrapper">
+              <span className="month-display">
+                {formatMonthBR(month).charAt(0).toUpperCase() + formatMonthBR(month).slice(1)}
+              </span>
+              <button
+                className="calendar-btn"
+                onClick={() => setShowMonthPicker(!showMonthPicker)}
+                title="Selecionar mês e ano"
+              >
+                📅
+              </button>
+              
+              {showMonthPicker && (
+                <div className="month-picker-popup">
+                  <div className="year-selector">
+                    <button
+                      className="year-nav-btn"
+                      onClick={() => handleYearChange(currentYear - 1)}
+                      title="Ano anterior"
+                    >
+                      ←
+                    </button>
+                    <span className="year-display">{currentYear}</span>
+                    <button
+                      className="year-nav-btn"
+                      onClick={() => handleYearChange(currentYear + 1)}
+                      title="Próximo ano"
+                    >
+                      →
+                    </button>
+                  </div>
+                  
+                  <div className="month-grid">
+                    {months.map((monthName, index) => (
+                      <button
+                        key={index}
+                        className={`month-option ${currentMonth === index + 1 ? "active" : ""}`}
+                        onClick={() => handleMonthSelect(index + 1)}
+                      >
+                        {monthName.substring(0, 3)}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+            <button
+              className="month-btn"
+              onClick={() => onMonthChange(getNextMonth(month))}
+              title="Próximo mês"
+            >
+              →
+            </button>
+          </div>
+        )}
+      </div>
+
+      {showMonthPicker && (
+        <div
+          className="month-picker-overlay"
+          onClick={() => setShowMonthPicker(false)}
         />
       )}
-        {/* <select className="header-select">
-          <option>Janeiro / 2026</option>
-          <option>Fevereiro / 2026</option>
-        </select> */}
-      </div>
 
       {/* RIGHT */}
       <div className="header-right">

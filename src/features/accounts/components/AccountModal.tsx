@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import type { Account } from "../types";
+import "./AccountModal.css";
 
 type Props = {
     account?: Account | null;

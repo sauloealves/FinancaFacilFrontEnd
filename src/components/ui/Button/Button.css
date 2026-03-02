@@ -1,11 +1,16 @@
 .btn {
-  padding: 12px;
+  padding: 10px 16px;
   border-radius: var(--radius-md);
   border: none;
   font-size: var(--font-body);
   font-weight: 500;
   cursor: pointer;
   transition: background-color 0.2s ease;
+  white-space: nowrap;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Variants */

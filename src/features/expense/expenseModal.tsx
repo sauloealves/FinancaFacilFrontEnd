@@ -5,6 +5,7 @@ import { createCategory } from "../../services/categoryService";
 import CategoryModal from "../categories/CategoryModal";
 import { Modal, Input, Button } from "../../components/ui";
 import "./expenseModal.css";
+import AccountModal from "../accounts/components/AccountModal";
 
 type ExpenseModalProps = {
   isOpen: boolean;

@@ -3,7 +3,7 @@ import type { Category } from "../features/categories/types";
 
 export async function getCategories(): Promise<Category[]> {
   const { data } = await api.get<Category[]>("/categories");
-  return data.filter((c) => (c as any).isDeleted ? false : true);
+  return data.filter((c) => !(c as any).isDeleted);
 }
 
 export async function createCategory(payload: {
