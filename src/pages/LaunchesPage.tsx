@@ -6,6 +6,7 @@ import EditLaunchModal from "../features/launches/EditLaunchModal";
 import { useAccountFilter } from "../contexts/AccountFilterContext";
 import type { LaunchRow } from "../features/launches/types";
 import { useLaunches } from "../contexts/launches/useLaunches";
+import { isTransactionType } from "../utils/sortUtils";
 /**
  * Página de Lançamentos
  * Caminho: /launches
@@ -24,7 +25,7 @@ export default function LaunchesPage() {
   selectedAccounts.length === 0
     ? launches
     : launches.filter(l => {
-        if (l.type === "transfer") {
+        if (isTransactionType(l.type, "transfer")) {
           return (
             selectedAccounts.includes(l.fromAccount?.id ?? "") ||
             selectedAccounts.includes(l.toAccount?.id ?? "")

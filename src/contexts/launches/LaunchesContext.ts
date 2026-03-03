@@ -4,6 +4,7 @@ import type { LaunchRow } from "../../features/launches/types";
 export type LaunchesContextType = {
   launches: LaunchRow[];
   updateLaunch: (updated: LaunchRow) => void;
+  reloadLaunches: () => Promise<void>;
 };
 
 export const LaunchesContext =

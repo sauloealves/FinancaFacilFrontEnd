@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
+import { useLaunches } from "../../contexts/launches/useLaunches";
 import { createCategory } from "../../services/categoryService";
+import { createTransaction } from "../../services/launchService";
 import CategoryModal from "../categories/CategoryModal";
 import AccountModal from "../accounts/components/AccountModal";
 import { Modal, Input, Button } from "../../components/ui";
 import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
-import { sortCategoriesHierarchically, sortAccountsAlphabetically } from "../../utils/sortUtils";
 import "./RevenueModal.css";
+import { sortAccountsAlphabetically, sortCategoriesHierarchically } from "../../utils/sortUtils";
 
 type RevenueModalProps = {
   isOpen: boolean;
@@ -16,19 +18,36 @@ type RevenueModalProps = {
 
 type LaunchType = "single" | "installment" | "recurring";
 
+type RecurrenceType = "weekly" | "biweekly" | "monthly" | "yearly" | "indefinite";
+
+type FormState = {
+  description: string;
+  value: string;
+  category: string;
+  account: string;
+  startDate: string;
+  installmentFrom: number;
+  installmentTo: number;
+  recurrence: RecurrenceType;
+  hasEndDate: boolean;
+  endDate: string;
+};
+
+type FormErrors = Partial<Record<keyof FormState, string>>;
+
 export default function RevenueModal({
   isOpen,
   onClose,
 }: Readonly<RevenueModalProps>) {
     const { accounts, addAccount, reloadAccounts } = useAccounts();
     const { categories, addCategory, reloadCategories } = useCategories();
+    const { reloadLaunches } = useLaunches();
     const [type, setType] = useState<LaunchType>("single");
-    type FormErrors = Partial<Record<keyof typeof form, string>>;
     const [errors, setErrors] = useState<FormErrors>({});
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showAccountModal, setShowAccountModal] = useState(false);
 
-    const [form, setForm] = useState({
+    const [form, setForm] = useState<FormState>({
         description: "",
         value: "",
         category: "",
@@ -86,73 +105,90 @@ export default function RevenueModal({
     }
 
     function validateField(
-        field: keyof typeof form,
-        value: string | number | boolean
-        ) {
-        let message = "";
-
-        switch (field) {
-            case "description":
-            if (!String(value).trim()) {
-                message = "Descrição é obrigatória";
-            }
-            break;
-
-            case "value":
-            if (!value || Number(value) <= 0) {
-                message = "Informe um valor válido";
-            }
-            break;
-
-            case "account":
-            if (!value) {
-              message = "Selecione uma conta";
-            }
-            break;
-
-            case "category":
-            if (!value) {
-              message = "Selecione uma categoria";
-            }
-            break;
-
-            case "startDate":
-            if (!value) {
-                message = "Data inicial é obrigatória";
-            }
-            break;
-
-            case "endDate":
-            if (form.hasEndDate) {
-                if (!value) {
-                message = "Data final é obrigatória";
-                } else if (String(value) <= form.startDate) {
-                message = "Data final deve ser maior que a data inicial";
-                }
-            }
-            break;
-        }
-
+        field: keyof FormState,
+        value: unknown
+    ): void {
+        const message = getFieldValidationMessage(field, value);
         setErrors(prev => {
             const next = { ...prev };
-
-            if (message) {
-            next[field] = message;
-            } else {
-            delete next[field]; 
-            }
-
+            if (message) next[field] = message;
+            else delete next[field];
             return next;
         });
     }
 
-    
+    function getFieldValidationMessage(field: keyof FormState, value: unknown): string {
+        switch (field) {
+            case "description":
+                return String(value).trim() ? "" : "Descrição é obrigatória";
+            case "value":
+                return value && Number(value) > 0 ? "" : "Informe um valor válido";
+            case "category":
+                return value ? "" : "Selecione uma categoria";
+            case "account":
+                return value ? "" : "Selecione uma conta";
+            case "startDate":
+                return value ? "" : "Data inicial é obrigatória";
+            case "endDate":
+                return getEndDateValidationMessage(value);
+            default:
+                return "";
+        }
+    }
+    function getEndDateValidationMessage(value: unknown): string {
+        if (!form.hasEndDate) return "";
+        if (!value) return "Data final é obrigatória";
+        return (value as string) <= form.startDate ? "Data final deve ser maior que a data inicial" : "";
+    }
 
     function handleSubmit() {
-        if (validate()) {
-        console.log({ type, form });
-        onClose();
-        }
+        if (!validate()) return;
+
+        const revenue = {
+            type: "income" as const,
+            description: form.description.trim(),
+            value: Number(form.value),
+            categoryId: form.category,
+            accountId: form.account,
+            startDate: form.startDate,
+            occurrenceType: type,
+            ...(type === "installment" && {
+                installmentFrom: form.installmentFrom,
+                installmentTo: form.installmentTo,
+            }),
+            ...(type === "recurring" && {
+                recurrence: form.recurrence,
+                endDate: form.hasEndDate ? form.endDate : null,
+            }),
+        };
+
+        createTransaction(revenue)
+            .then(async () => {
+                await reloadLaunches();
+                onClose();
+                resetForm();
+            })
+            .catch((err) => {
+                console.error(err);
+                alert("Erro ao criar receita");
+            });
+    }
+
+    function resetForm() {
+        setForm({
+            description: "",
+            value: "",
+            category: "",
+            account: "",
+            startDate: "",
+            installmentFrom: 1,
+            installmentTo: 1,
+            recurrence: "monthly",
+            hasEndDate: false,
+            endDate: "",
+        });
+        setErrors({});
+        setType("single");
     }
 
     async function handleCreateAccount(data: { name: string; initialBalance: number }) {
@@ -187,6 +223,7 @@ export default function RevenueModal({
       isOpen={isOpen}
       title="Nova Receita"
       onClose={onClose}
+      size="lg"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>
@@ -201,10 +238,22 @@ export default function RevenueModal({
       {/* CAMPOS BASE */}
       <div className="revenue-section">
         <Input
+          label="Data Lançamento"
+          autoFocus
+          type="date"
+          value={form.startDate}
+          error={errors.startDate}
+          onChange={e => {
+            const value = e.target.value;
+            setForm({ ...form, startDate: value });
+            validateField("startDate", value);
+          }}
+        />
+
+        <Input
           label="Descrição"
           value={form.description}
           error={errors.description}
-          autoFocus
           onChange={e => {  
             const value = e.target.value;
             setForm({ ...form, description: value });
@@ -278,50 +327,46 @@ export default function RevenueModal({
             {errors.account}
             </span>
             )}
-          </div>
-
-        <Input
-          label="Data Lançamento"
-          type="date"
-          value={form.startDate}
-          error={errors.startDate}
-          onChange={e => {
-            const value = e.target.value;
-            setForm({ ...form, startDate: value });
-            validateField("startDate", value);
-          }}
-        />
+          </div>        
       </div>
 
       {/* TIPO DE LANÇAMENTO */}
       <div className="revenue-section">
-        <label className="section-label">Tipo de lançamento</label>
+        <fieldset className="section-label">
+          <legend>Tipo de lançamento</legend>
+        </fieldset>
 
         <div className="radio-group">
-          <label>
+          <label htmlFor="revenue-type-single">
             <input
+              id="revenue-type-single"
               type="radio"
               checked={type === "single"}
               onChange={() => setType("single")}
             />
+            {" "}
             Lançamento único
           </label>
 
-          <label>
+          <label htmlFor="revenue-type-installment">
             <input
+              id="revenue-type-installment"
               type="radio"
               checked={type === "installment"}
               onChange={() => setType("installment")}
             />
+            {" "}
             Parcelado
           </label>
 
-          <label>
+          <label htmlFor="revenue-type-recurring">
             <input
+              id="revenue-type-recurring"
               type="radio"
               checked={type === "recurring"}
               onChange={() => setType("recurring")}
             />
+            {" "}
             Recorrente
           </label>
         </div>
@@ -330,7 +375,9 @@ export default function RevenueModal({
       {/* PARCELAMENTO */}
       {type === "installment" && (
         <div className="revenue-section">
-          <label className="section-label">Parcelamento</label>
+          <fieldset className="section-label">
+            <legend>Parcelamento</legend>
+          </fieldset>
 
           <div className="installment-group">
             <Input
@@ -373,7 +420,60 @@ export default function RevenueModal({
         </div>
       )}
 
-        
+      {/* RECORRÊNCIA */}
+      {type === "recurring" && (
+        <div className="revenue-section">
+          <fieldset className="section-label">
+            <legend>Recorrência</legend>
+          </fieldset>
+
+          <select
+            className="revenue-select"
+            value={form.recurrence}
+            onChange={e => {
+              const value = e.target.value as RecurrenceType;
+              setForm({ ...form, recurrence: value });
+            }}
+          >
+            <option value="weekly">Semanal</option>
+            <option value="biweekly">Quinzenal</option>
+            <option value="monthly">Mensal</option>
+            <option value="yearly">Anual</option>
+            <option value="indefinite">Indefinido</option>
+          </select>
+
+          <label htmlFor="revenue-has-end-date" className="checkbox-group">
+            <input
+              id="revenue-has-end-date"
+              type="checkbox"
+              checked={form.hasEndDate}
+              onChange={e =>
+                setForm({
+                  ...form,
+                  hasEndDate: e.target.checked,
+                  endDate: e.target.checked ? form.endDate : "",
+                })
+              }
+            />
+            {" "}
+            Definir data final
+          </label>
+
+          {form.hasEndDate && (
+            <Input
+              label="Data final"
+              type="date"
+              value={form.endDate}
+              error={errors.endDate}
+              onChange={e => {
+                const v = e.target.value;
+                setForm({ ...form, endDate: v });
+                validateField("endDate", v);
+              }}
+            />
+          )}
+        </div>
+      )}
         {showCategoryModal && (
           <CategoryModal
             category={null}

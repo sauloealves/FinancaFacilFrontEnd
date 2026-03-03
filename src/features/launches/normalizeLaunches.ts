@@ -1,4 +1,5 @@
 import type { LaunchRow, DayGroup, LaunchTableData } from "./types";
+import { isTransactionType } from "../../utils/sortUtils";
 
 type NormalizeInput = {
   month: string;
@@ -38,9 +39,9 @@ export function normalizeLaunches({
     let expenseTotal = 0;
 
     for (const row of rows) {
-      if (row.type === "income") {
+      if (isTransactionType(row.type, "income")) {
         incomeTotal += row.value;
-      } else if (row.type === "expense") {
+      } else if (isTransactionType(row.type, "expense")) {
         expenseTotal += row.value;
       }
       // transfer não altera saldo global

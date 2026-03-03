@@ -1,13 +1,15 @@
 import { useState } from "react";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
+import { useLaunches } from "../../contexts/launches/useLaunches";
 import { createCategory } from "../../services/categoryService";
+import { createTransaction } from "../../services/launchService";
 import CategoryModal from "../categories/CategoryModal";
 import { Modal, Input, Button } from "../../components/ui";
 import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
-import { sortCategoriesHierarchically, sortAccountsAlphabetically } from "../../utils/sortUtils";
 import "./expenseModal.css";
 import AccountModal from "../accounts/components/AccountModal";
+import { sortCategoriesHierarchically } from "../../utils/sortUtils";
 
 type ExpenseModalProps = {
   isOpen: boolean;
@@ -15,6 +17,8 @@ type ExpenseModalProps = {
 };
 
 type LaunchType = "single" | "installment" | "recurring";
+
+type RecurrenceType = "weekly" | "biweekly" | "monthly" | "yearly" | "indefinite";
 
 type FormState = {
   description: string;
@@ -26,16 +30,17 @@ type FormState = {
   installmentFrom: number;
   installmentTo: number;
 
-  recurrence: "weekly" | "biweekly" | "monthly" | "yearly" | "indefinite";
+  recurrence: RecurrenceType;
   hasEndDate: boolean;
   endDate: string;
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
-export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
+export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalProps>) {
   const { accounts, addAccount, reloadAccounts } = useAccounts();
   const { categories, addCategory, reloadCategories } = useCategories();
+  const { reloadLaunches } = useLaunches();
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -65,7 +70,7 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
     if (!form.description.trim()) e.description = "Descrição é obrigatória";
     if (!form.value || Number(form.value) <= 0) e.value = "Informe um valor válido";
     if (!form.category) e.category = "Selecione uma categoria";
-    if (!form.startDate) e.startDate = "Data inicial é obrigatória";
+    if (!form.startDate) e.startDate = "Data Lançamento é obrigatória";
     if (!form.account) e.account = "Selecione uma conta";
 
     if (type === "installment") {
@@ -89,34 +94,8 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
     return Object.keys(e).length === 0;
   }
 
-  function validateField(field: keyof FormState, value: any) {
-    let message = "";
-
-    switch (field) {
-      case "description":
-        if (!String(value).trim()) message = "Descrição é obrigatória";
-        break;
-      case "value":
-        if (!value || Number(value) <= 0) message = "Informe um valor válido";
-        break;
-      case "category":
-        if (!value) message = "Selecione uma categoria";
-        break;
-      case "account":
-        if (!value) message = "Selecione uma conta";
-        break;
-      case "startDate":
-        if (!value) message = "Data inicial é obrigatória";
-        break;
-      case "endDate":
-        if (form.hasEndDate) {
-          if (!value) message = "Data final é obrigatória";
-          else if (value <= form.startDate)
-            message = "Data final deve ser maior que a data inicial";
-        }
-        break;
-    }
-
+  function validateField(field: keyof FormState, value: unknown): void {
+    const message = getFieldValidationMessage(field, value);
     setErrors(prev => {
       const next = { ...prev };
       if (message) next[field] = message;
@@ -125,19 +104,79 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
     });
   }
 
+  function getFieldValidationMessage(field: keyof FormState, value: unknown): string {
+    switch (field) {
+      case "description":
+        return String(value).trim() ? "" : "Descrição é obrigatória";
+      case "value":
+        return value && Number(value) > 0 ? "" : "Informe um valor válido";
+      case "category":
+        return value ? "" : "Selecione uma categoria";
+      case "account":
+        return value ? "" : "Selecione uma conta";
+      case "startDate":
+        return value ? "" : "Data Lançamento é obrigatória";
+      case "endDate":
+        return getEndDateValidationMessage(value);
+      default:
+        return "";
+    }
+  }
+
+  function getEndDateValidationMessage(value: unknown): string {
+    if (!form.hasEndDate) return "";
+    if (!value) return "Data final é obrigatória";
+    return (value as string) <= form.startDate ? "Data final deve ser maior que a data inicial" : "";
+  }
+
   function handleSubmit() {
     if (!validate()) return;
 
-    // Payload pronto para API
-    console.log({
-      kind: "expense",
-      type,
-      ...form,
+    const expense = {
+      type: "expense" as const,
+      description: form.description.trim(),
       value: Number(form.value),
-      endDate: form.hasEndDate ? form.endDate : null,
-    });
+      categoryId: form.category,
+      accountId: form.account,
+      startDate: form.startDate,
+      occurrenceType: type,
+      ...(type === "installment" && {
+        installmentFrom: form.installmentFrom,
+        installmentTo: form.installmentTo,
+      }),
+      ...(type === "recurring" && {
+        recurrence: form.recurrence,
+        endDate: form.hasEndDate ? form.endDate : null,
+      }),
+    };
 
-    onClose();
+    createTransaction(expense)
+      .then(async () => {
+        await reloadLaunches();
+        onClose();
+        resetForm();
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Erro ao criar despesa");
+      });
+  }
+
+  function resetForm() {
+    setForm({
+      description: "",
+      value: "",
+      category: "",
+      account: "",
+      startDate: "",
+      installmentFrom: 1,
+      installmentTo: 1,
+      recurrence: "monthly",
+      hasEndDate: false,
+      endDate: "",
+    });
+    setErrors({});
+    setType("single");
   }
 
   async function handleCreateCategory(data: { name: string; parentId?: string | null }) {
@@ -172,6 +211,7 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
       isOpen={isOpen}
       title="Nova Despesa"
       onClose={onClose}
+      size="lg"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
@@ -181,11 +221,24 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
     >
       {/* CAMPOS BASE */}
       <div className="expense-section">
+        
+        <Input
+            label="Data Lançamento"
+            autoFocus
+            type="date"
+            value={form.startDate}
+            error={errors.startDate}
+            onChange={e => {
+            const v = e.target.value;
+            setForm({ ...form, startDate: v });
+            validateField("startDate", v);
+            }}
+        />
+
         <Input
           label="Descrição"
           value={form.description}
-          error={errors.description}
-          autoFocus
+          error={errors.description}          
           onChange={e => {
             const v = e.target.value;
             setForm({ ...form, description: v });
@@ -255,46 +308,28 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
             <span className="input-error">{errors.account}</span>
             )}
         </div>
-
-        <Input
-            label="Data inicial"
-            type="date"
-            value={form.startDate}
-            error={errors.startDate}
-            onChange={e => {
-            const v = e.target.value;
-            setForm({ ...form, startDate: v });
-            validateField("startDate", v);
-            }}
-        />
-
-        <Input
-          label="Data inicial"
-          type="date"
-          value={form.startDate}
-          error={errors.startDate}
-          onChange={e => {
-            const v = e.target.value;
-            setForm({ ...form, startDate: v });
-            validateField("startDate", v);
-          }}
-        />
+        
       </div>
 
       {/* TIPO */}
       <div className="expense-section">
-        <label className="section-label">Tipo de lançamento</label>
+        <fieldset className="section-label">
+          <legend>Tipo de lançamento</legend>
+        </fieldset>
         <div className="radio-group">
-          <label>
-            <input type="radio" checked={type === "single"} onChange={() => changeType("single")} />
+          <label htmlFor="type-single">
+            <input id="type-single" type="radio" checked={type === "single"} onChange={() => changeType("single")} />
+            {" "}
             Lançamento único
           </label>
-          <label>
-            <input type="radio" checked={type === "installment"} onChange={() => changeType("installment")} />
+          <label htmlFor="type-installment">
+            <input id="type-installment" type="radio" checked={type === "installment"} onChange={() => changeType("installment")} />
+            {" "}
             Parcelado
           </label>
-          <label>
-            <input type="radio" checked={type === "recurring"} onChange={() => changeType("recurring")} />
+          <label htmlFor="type-recurring">
+            <input id="type-recurring" type="radio" checked={type === "recurring"} onChange={() => changeType("recurring")} />
+            {" "}
             Recorrente
           </label>
         </div>
@@ -303,7 +338,9 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
       {/* PARCELAMENTO */}
       {type === "installment" && (
         <div className="expense-section">
-          <label className="section-label">Parcelamento</label>
+          <fieldset className="section-label">
+            <legend>Parcelamento</legend>
+          </fieldset>
           <div className="installment-group">
             <Input
               label="De"
@@ -337,12 +374,17 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
       {/* RECORRÊNCIA */}
       {type === "recurring" && (
         <div className="expense-section">
-          <label className="section-label">Recorrência</label>
+          <fieldset className="section-label">
+            <legend>Recorrência</legend>
+          </fieldset>
 
           <select
             className="expense-select"
             value={form.recurrence}
-            onChange={e => setForm({ ...form, recurrence: e.target.value as any })}
+            onChange={e => {
+              const value = e.target.value as RecurrenceType;
+              setForm({ ...form, recurrence: value });
+            }}
           >
             <option value="weekly">Semanal</option>
             <option value="biweekly">Quinzenal</option>
@@ -351,8 +393,9 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
             <option value="indefinite">Indefinido</option>
           </select>
 
-          <label className="checkbox-group">
+          <label htmlFor="has-end-date" className="checkbox-group">
             <input
+              id="has-end-date"
               type="checkbox"
               checked={form.hasEndDate}
               onChange={e =>
@@ -363,6 +406,7 @@ export default function ExpenseModal({ isOpen, onClose }: ExpenseModalProps) {
                 })
               }
             />
+            {" "}
             Definir data final
           </label>
 

@@ -1,4 +1,5 @@
 import type { LaunchRow } from "../launches/types";
+import { isTransactionType } from "../../utils/sortUtils";
 
 export function calculateAccountBalances(
   launches: LaunchRow[]
@@ -6,7 +7,7 @@ export function calculateAccountBalances(
   const balances: Record<string, number> = {};
 
   launches.forEach(l => {
-    if (l.type === "transfer") {
+    if (isTransactionType(l.type, "transfer")) {
       if (l.fromAccount?.id) {
         balances[l.fromAccount.id] =
           (balances[l.fromAccount.id] || 0) - l.value;
@@ -23,7 +24,7 @@ export function calculateAccountBalances(
     if (l.account?.id) {
       balances[l.account.id] =
         (balances[l.account.id] || 0) +
-        (l.type === "income" ? l.value : -l.value);
+        (isTransactionType(l.type, "income") ? l.value : -l.value);
     }
   });
 

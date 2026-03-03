@@ -1,11 +1,13 @@
 import { useState } from "react";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
+import { useLaunches } from "../../contexts/launches/useLaunches";
 import { Modal, Input, Button } from "../../components/ui";
 import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
 import AccountModal from "../accounts/components/AccountModal";
 import CategoryModal from "../categories/CategoryModal";
 import { createCategory } from "../../services/categoryService";
+import { createTransaction } from "../../services/launchService";
 import "./TransferModal.css";
 
 type TransferModalProps = {
@@ -14,6 +16,8 @@ type TransferModalProps = {
 };
 
 type LaunchType = "single" | "installment" | "recurring";
+
+type RecurrenceType = "weekly" | "biweekly" | "monthly" | "yearly" | "indefinite";
 
 type FormState = {
   description: string;
@@ -26,16 +30,17 @@ type FormState = {
   installmentFrom: number;
   installmentTo: number;
 
-  recurrence: "weekly" | "biweekly" | "monthly" | "yearly" | "indefinite";
+  recurrence: RecurrenceType;
   hasEndDate: boolean;
   endDate: string;
 };
 
 type FormErrors = Partial<Record<keyof FormState, string>>;
 
-export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
+export default function TransferModal({ isOpen, onClose }: Readonly<TransferModalProps>) {
   const { accounts, addAccount, reloadAccounts } = useAccounts();
   const { categories, addCategory, reloadCategories } = useCategories();
+  const { reloadLaunches } = useLaunches();
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
   const [showAccountModal, setShowAccountModal] = useState(false);
@@ -94,15 +99,53 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
   function handleSubmit() {
     if (!validate()) return;
 
-    console.log({
-      kind: "transfer",
-      type,
-      ...form,
+    const transfer = {
+      type: "transfer" as const,
+      description: form.description.trim(),
       value: Number(form.value),
-      endDate: form.hasEndDate ? form.endDate : null,
-    });
+      fromAccountId: form.fromAccount,
+      toAccountId: form.toAccount,
+      ...(form.category && { categoryId: form.category }),
+      startDate: form.startDate,
+      occurrenceType: type,
+      ...(type === "installment" && {
+        installmentFrom: form.installmentFrom,
+        installmentTo: form.installmentTo,
+      }),
+      ...(type === "recurring" && {
+        recurrence: form.recurrence as any,
+        endDate: form.hasEndDate ? form.endDate : null,
+      }),
+    };
 
-    onClose();
+    createTransaction(transfer)
+      .then(async () => {
+        await reloadLaunches();
+        onClose();
+        resetForm();
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Erro ao criar transferência");
+      });
+  }
+
+  function resetForm() {
+    setForm({
+      description: "",
+      value: "",
+      category: "",
+      fromAccount: "",
+      toAccount: "",
+      startDate: "",
+      installmentFrom: 1,
+      installmentTo: 1,
+      recurrence: "monthly",
+      hasEndDate: false,
+      endDate: "",
+    });
+    setErrors({});
+    setType("single");
   }
 
   async function handleCreateAccount(data: { name: string; initialBalance: number }) {
@@ -139,6 +182,7 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
       isOpen={isOpen}
       title="Transferência entre contas"
       onClose={onClose}
+      size="lg"
       footer={
         <>
           <Button variant="secondary" onClick={onClose}>Cancelar</Button>
@@ -214,11 +258,25 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
 
       {/* TIPO */}
       <div className="transfer-section">
-        <label className="section-label">Tipo</label>
+        <fieldset className="section-label">
+          <legend>Tipo</legend>
+        </fieldset>
         <div className="radio-group">
-          <label><input type="radio" checked={type === "single"} onChange={() => changeType("single")} /> Único</label>
-          <label><input type="radio" checked={type === "installment"} onChange={() => changeType("installment")} /> Parcelado</label>
-          <label><input type="radio" checked={type === "recurring"} onChange={() => changeType("recurring")} /> Recorrente</label>
+          <label htmlFor="transfer-type-single">
+            <input id="transfer-type-single" type="radio" checked={type === "single"} onChange={() => changeType("single")} />
+            {" "}
+            Único
+          </label>
+          <label htmlFor="transfer-type-installment">
+            <input id="transfer-type-installment" type="radio" checked={type === "installment"} onChange={() => changeType("installment")} />
+            {" "}
+            Parcelado
+          </label>
+          <label htmlFor="transfer-type-recurring">
+            <input id="transfer-type-recurring" type="radio" checked={type === "recurring"} onChange={() => changeType("recurring")} />
+            {" "}
+            Recorrente
+          </label>
         </div>
       </div>
 
@@ -242,12 +300,17 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
       {/* RECORRÊNCIA */}
       {type === "recurring" && (
         <div className="transfer-section">
-          <label className="section-label">Recorrência</label>
+          <fieldset className="section-label">
+            <legend>Recorrência</legend>
+          </fieldset>
 
           <select
             className="transfer-select"
             value={form.recurrence}
-            onChange={e => setForm({ ...form, recurrence: e.target.value as any })}
+            onChange={e => {
+              const value = e.target.value as RecurrenceType;
+              setForm({ ...form, recurrence: value });
+            }}
           >
             <option value="weekly">Semanal</option>
             <option value="biweekly">Quinzenal</option>
@@ -256,14 +319,16 @@ export default function TransferModal({ isOpen, onClose }: TransferModalProps) {
             <option value="indefinite">Indefinido</option>
           </select>
 
-          <label className="checkbox-group">
+          <label htmlFor="transfer-has-end-date" className="checkbox-group">
             <input
+              id="transfer-has-end-date"
               type="checkbox"
               checked={form.hasEndDate}
               onChange={e =>
                 setForm({ ...form, hasEndDate: e.target.checked, endDate: "" })
               }
             />
+            {" "}
             Definir data final
           </label>
 

@@ -1,5 +1,6 @@
 import type { Account } from "../features/accounts/types";
 import type { LaunchRow } from "../features/launches/types";
+import { isTransactionType } from "./sortUtils";
 
 export function calculateAccountCurrentBalance(
   account: Account,
@@ -8,7 +9,7 @@ export function calculateAccountCurrentBalance(
   let balance = account.initialBalance;
 
   launches.forEach(l => {
-    if (l.type === "transfer") {
+    if (isTransactionType(l.type, "transfer")) {
       if (l.fromAccount?.id === account.id) {
         balance -= l.value;
       }
@@ -21,11 +22,11 @@ export function calculateAccountCurrentBalance(
     }
 
     if (l.account?.id === account.id) {
-      if (l.type === "income") {
+      if (isTransactionType(l.type, "income")) {
         balance += l.value;
       }
 
-      if (l.type === "expense") {
+      if (isTransactionType(l.type, "expense")) {
         balance -= l.value;
       }
     }

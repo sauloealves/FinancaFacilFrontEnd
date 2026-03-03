@@ -44,14 +44,14 @@ export default function SearchableSelect<T>({
 
   // Filtrar itens baseado no texto digitado
   const filteredItems = items.filter((item) =>
-    getLabel(item).toLowerCase().includes(searchText.toLowerCase())
+    (getLabel(item) || "").toLowerCase().includes(searchText.toLowerCase())
   );
 
   // Obter label do item selecionado
   const getSelectedLabel = (): string => {
     if (!selectedValue) return "";
     const selectedItem = items.find((item) => getId(item) === selectedValue);
-    return selectedItem ? getLabel(selectedItem) : "";
+    return selectedItem ? (getLabel(selectedItem) || "") : "";
   };
   const selectedLabel = getSelectedLabel();
 
@@ -123,7 +123,7 @@ export default function SearchableSelect<T>({
                 tabIndex={0}
                 onKeyDown={(e) => e.key === 'Enter' && handleSelect(getId(item))}
               >
-                {getLabel(item)}
+                {getLabel(item) || ""}
               </div>
             ))
           ) : (

@@ -1,5 +1,7 @@
 import type { LaunchRow as LaunchRowType } from "./types";
+
 import "./LaunchRow.css";
+import { isTransactionType } from "../../utils/sortUtils";
 
 type LaunchRowProps = {
   row: LaunchRowType;
@@ -14,7 +16,7 @@ export default function LaunchRow({row, onEdit}: LaunchRowProps) {
       console.log("Clicou na linha", row);
     }}>
       <span className="col-description">
-        {row.type === "transfer" ? (
+        {isTransactionType(row.type, "transfer") ? (
           "⇄ Transferência"
         )  : (
           <span
@@ -26,7 +28,7 @@ export default function LaunchRow({row, onEdit}: LaunchRowProps) {
       </span>
 
       <span className="col-account">
-        {row.type === "transfer" ? (
+        {isTransactionType(row.type, "transfer") ? (
             <span
               className="transfer-display"              
             >
@@ -43,7 +45,7 @@ export default function LaunchRow({row, onEdit}: LaunchRowProps) {
       </span>
 
       <span className="col-category">
-        {row.type === "transfer" ? (
+        {isTransactionType(row.type, "transfer") ? (
           "—"
         ) : (
           <span
@@ -73,7 +75,7 @@ function formatValue(row: LaunchRowType) {
     currency: "BRL",
   });
 
-  if (row.type === "income") return `+ ${value}`;
-  if (row.type === "expense") return `- ${value}`;
+  if (isTransactionType(row.type, "income")) return `+ ${value}`;
+  if (isTransactionType(row.type, "expense")) return `- ${value}`;
   return value;
 }

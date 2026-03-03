@@ -2,6 +2,16 @@ import type { Category } from "../features/categories/types";
 import type { Account } from "../features/accounts/types";
 
 /**
+ * Compara tipo de transação ignorando maiúsculas/minúsculas
+ */
+export function isTransactionType(
+  type: string | undefined,
+  targetType: "income" | "expense" | "transfer"
+): boolean {
+  return (type || "").toLowerCase() === targetType.toLowerCase();
+}
+
+/**
  * Ordena categorias hierarquicamente:
  * - Pais em ordem alfabética
  * - Filhos dentro de cada pai em ordem alfabética
@@ -12,7 +22,7 @@ export function sortCategoriesHierarchically(
   // Categorias sem pai, ordenadas alfabeticamente
   const parents = categories
     .filter((c) => !c.parentId)
-    .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR"));
 
   const result: Category[] = [];
 
@@ -21,7 +31,7 @@ export function sortCategoriesHierarchically(
     // Filhos do pai, ordenados alfabeticamente
     const children = categories
       .filter((c) => c.parentId === parent.id)
-      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+      .sort((a, b) => (a.name || "").localeCompare(b.name || "", "pt-BR"));
     result.push(...children);
   }
 
@@ -33,6 +43,6 @@ export function sortCategoriesHierarchically(
  */
 export function sortAccountsAlphabetically(accounts: Account[]): Account[] {
   return [...accounts].sort((a, b) =>
-    a.name.localeCompare(b.name, "pt-BR")
+    (a.name || "").localeCompare(b.name || "", "pt-BR")
   );
 }
