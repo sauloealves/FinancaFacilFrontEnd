@@ -8,6 +8,7 @@ type InputProps = {
   error?: string;
   autoFocus?: boolean;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
 
 export default function Input({
@@ -18,6 +19,7 @@ export default function Input({
   error,
   autoFocus = false,
   onChange,
+  onKeyDown,
 }: Readonly<InputProps>) {
   return (
     <div className="input-group">
@@ -27,6 +29,7 @@ export default function Input({
         value={value}
         placeholder={placeholder}
         onChange={onChange}
+        onKeyDown={onKeyDown}
         autoFocus={autoFocus}
       />
       {error && <span className="input-error">{error}</span>}

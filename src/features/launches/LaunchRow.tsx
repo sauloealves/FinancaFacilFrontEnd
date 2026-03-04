@@ -8,16 +8,41 @@ type LaunchRowProps = {
   onEdit: (row: LaunchRowType) => void;
 };
 
-export default function LaunchRow({row, onEdit}: LaunchRowProps) {
+export default function LaunchRow({row, onEdit}: Readonly<LaunchRowProps>) {
 
   return (
-    <div className={`launch-row ${row.type}`} onClick={() => {
-      onEdit(row);
-      console.log("Clicou na linha", row);
-    }}>
+    <div 
+      className={`launch-row ${row.type}`} 
+      onClick={() => {
+        onEdit(row);
+        console.log("Clicou na linha", row);
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          onEdit(row);
+        }
+      }}
+      role="button"
+      tabIndex={0}
+    >
       <span className="col-description">
         {isTransactionType(row.type, "transfer") ? (
-          "⇄ Transferência"
+          <span style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+            <span>⇄ Transferência</span>
+            <span style={{
+              display: 'inline-block',
+              padding: '2px 8px',
+              backgroundColor: '#e3f2fd',
+              color: '#1976d2',
+              borderRadius: '4px',
+              fontSize: '11px',
+              fontWeight: '600',
+              textTransform: 'uppercase'
+            }}>
+              Transfer
+            </span>
+          </span>
         )  : (
           <span
             className="value-display"            

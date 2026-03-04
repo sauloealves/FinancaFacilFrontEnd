@@ -7,7 +7,7 @@ type DayGroupProps = {
     onEdit: (row: LaunchRowType) => void;
 };
 
-export default function DayGroup({ day, onEdit }: DayGroupProps) {
+export default function DayGroup({ day, onEdit }: Readonly<DayGroupProps>) {
   return (  
     <div className="day-group">
       {/* HEADER DO DIA */}

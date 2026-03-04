@@ -11,6 +11,7 @@ import { useAccounts } from "../../contexts/accounts/useAccounts";
 import AccountModal from "../accounts/components/AccountModal";
 import { isTransactionType } from "../../utils/sortUtils";
 import { Input } from "../../components/ui";
+import { updateLaunch as updateLaunchAPI } from "../../services/launchService";
 
 
 type Props = {
@@ -33,6 +34,7 @@ export default function EditLaunchModal({
     const [accountId, setAccountId] = useState(launch.account?.id ?? "");
     const [fromAccount, setFromAccount] = useState(launch.fromAccount?.id ?? "");
     const [toAccount, setToAccount] = useState(launch.toAccount?.id ?? "");
+    const [submitError, setSubmitError] = useState<string>("");
     const { categories, addCategory, reloadCategories } = useCategories();
     const { accounts, addAccount, reloadAccounts } = useAccounts();
     const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -63,31 +65,36 @@ export default function EditLaunchModal({
     }, []);
 
     function handleSave() {
-        const updated: LaunchRow = {
-            ...launch,
-            type,
-            date,
+        const numericValue = parseBRL(value);
+
+        setSubmitError("");
+
+        const payload: any = {
+            transactionId: launch.id,
             description,
-            value: parseBRL(value),
+            value: numericValue,
+            startDate: date,
+            type,
+            occurrenceType: "Single",
         };
 
         if (isTransactionType(type, "transfer")) {
-            updated.account = undefined;
-            updated.category = undefined;
-            const fa = accounts.find((a) => a.id === fromAccount);
-            const ta = accounts.find((a) => a.id === toAccount);
-            updated.fromAccount = { id: fromAccount, name: fa?.name ?? "" };
-            updated.toAccount = { id: toAccount, name: ta?.name ?? "" };
+            payload.fromAccountId = fromAccount;
+            payload.toAccountId = toAccount;
         } else {
-            updated.fromAccount = undefined;
-            updated.toAccount = undefined;
-            const acc = accounts.find((a) => a.id === accountId);
-            updated.account = { id: accountId, name: acc?.name ?? "" };
-            const cat = categories.find((c) => c.id === categoryId);
-            updated.category = { id: categoryId, name: cat?.name ?? "" };
+            payload.accountId = accountId;
+            payload.categoryId = categoryId;
         }
 
-        onSave(updated);
+        updateLaunchAPI(launch.id, payload)
+            .then((result) => {
+                onSave(result);
+            })
+            .catch((err) => {
+                console.error("Erro ao atualizar lançamento:", err);
+                const errorMsg = err?.response?.data?.message || err?.message || "Erro ao atualizar lançamento";
+                setSubmitError(errorMsg);
+            });
     }
 
     function isValid(): boolean {
@@ -129,6 +136,19 @@ export default function EditLaunchModal({
             <div className="modal"
                 onClick={e => e.stopPropagation()}
             >
+
+                {submitError && (
+                    <div style={{
+                        padding: '12px',
+                        marginBottom: '16px',
+                        backgroundColor: '#ffebee',
+                        color: '#c62828',
+                        borderRadius: '4px',
+                        border: '1px solid #ef5350'
+                    }}>
+                        <strong>Erro:</strong> {submitError}
+                    </div>
+                )}
 
                 {/* TAGS */}
                 <div className="tags">
@@ -231,11 +251,10 @@ export default function EditLaunchModal({
 
                     <Input
                         label="Valor"
-                        ref={valueRef}
+                        autoFocus
                         type="text"
                         placeholder="Valor"
-                        value={value}
-                        className={`field-value ${!parseBRL(value) ? "invalid" : ""}`}
+                        value={value}                        
                         onChange={e => setValue(maskBRLInput(e.target.value))}
                         onKeyDown={(e) => {
                             if (e.key === "Enter") {

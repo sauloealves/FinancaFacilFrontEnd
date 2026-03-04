@@ -43,6 +43,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
   const { reloadLaunches } = useLaunches();
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
+  const [submitError, setSubmitError] = useState<string>("");
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
 
@@ -132,6 +133,8 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
   function handleSubmit() {
     if (!validate()) return;
 
+    setSubmitError("");
+
     const expense = {
       type: "expense" as const,
       description: form.description.trim(),
@@ -153,12 +156,14 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
     createTransaction(expense)
       .then(async () => {
         await reloadLaunches();
+        await reloadAccounts();
         onClose();
         resetForm();
       })
       .catch((err) => {
-        console.error(err);
-        alert("Erro ao criar despesa");
+        console.error("Erro ao criar despesa:", err);
+        const errorMsg = err?.response?.data?.message || err?.message || "Erro ao criar despesa";
+        setSubmitError(errorMsg);
       });
   }
 
@@ -219,6 +224,19 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
         </>
       }
     >
+      {submitError && (
+        <div style={{
+          padding: '12px',
+          marginBottom: '16px',
+          backgroundColor: '#ffebee',
+          color: '#c62828',
+          borderRadius: '4px',
+          border: '1px solid #ef5350'
+        }}>
+          <strong>Erro:</strong> {submitError}
+        </div>
+      )}
+
       {/* CAMPOS BASE */}
       <div className="expense-section">
         

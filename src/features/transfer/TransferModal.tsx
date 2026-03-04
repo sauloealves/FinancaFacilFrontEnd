@@ -43,6 +43,7 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
   const { reloadLaunches } = useLaunches();
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
+  const [submitError, setSubmitError] = useState<string>("");
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [accountTarget, setAccountTarget] = useState<"from" | "to" | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -99,6 +100,8 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
   function handleSubmit() {
     if (!validate()) return;
 
+    setSubmitError("");
+
     const transfer = {
       type: "transfer" as const,
       description: form.description.trim(),
@@ -121,12 +124,14 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
     createTransaction(transfer)
       .then(async () => {
         await reloadLaunches();
+        await reloadAccounts();
         onClose();
         resetForm();
       })
       .catch((err) => {
-        console.error(err);
-        alert("Erro ao criar transferência");
+        console.error("Erro ao criar transferência:", err);
+        const errorMsg = err?.response?.data?.message || err?.message || "Erro ao criar transferência";
+        setSubmitError(errorMsg);
       });
   }
 
@@ -190,6 +195,19 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
         </>
       }
     >
+      {submitError && (
+        <div style={{
+          padding: '12px',
+          marginBottom: '16px',
+          backgroundColor: '#ffebee',
+          color: '#c62828',
+          borderRadius: '4px',
+          border: '1px solid #ef5350'
+        }}>
+          <strong>Erro:</strong> {submitError}
+        </div>
+      )}
+
       {/* CAMPOS BASE */}
       <div className="transfer-section">
         <Input

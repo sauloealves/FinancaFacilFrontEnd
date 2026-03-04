@@ -44,6 +44,7 @@ export default function RevenueModal({
     const { reloadLaunches } = useLaunches();
     const [type, setType] = useState<LaunchType>("single");
     const [errors, setErrors] = useState<FormErrors>({});
+    const [submitError, setSubmitError] = useState<string>("");
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showAccountModal, setShowAccountModal] = useState(false);
 
@@ -144,6 +145,8 @@ export default function RevenueModal({
     function handleSubmit() {
         if (!validate()) return;
 
+        setSubmitError("");
+
         const revenue = {
             type: "income" as const,
             description: form.description.trim(),
@@ -165,12 +168,14 @@ export default function RevenueModal({
         createTransaction(revenue)
             .then(async () => {
                 await reloadLaunches();
+                await reloadAccounts();
                 onClose();
                 resetForm();
             })
             .catch((err) => {
-                console.error(err);
-                alert("Erro ao criar receita");
+                console.error("Erro ao criar receita:", err);
+                const errorMsg = err?.response?.data?.message || err?.message || "Erro ao criar receita";
+                setSubmitError(errorMsg);
             });
     }
 
@@ -235,6 +240,19 @@ export default function RevenueModal({
         </>
       }
     >
+      {submitError && (
+        <div style={{
+          padding: '12px',
+          marginBottom: '16px',
+          backgroundColor: '#ffebee',
+          color: '#c62828',
+          borderRadius: '4px',
+          border: '1px solid #ef5350'
+        }}>
+          <strong>Erro:</strong> {submitError}
+        </div>
+      )}
+
       {/* CAMPOS BASE */}
       <div className="revenue-section">
         <Input
