@@ -1,20 +1,86 @@
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Card, Modal, Button } from "../components/ui";
+import { useLaunches } from "../contexts/launches/useLaunches";
+import { useAccounts } from "../contexts/accounts/useAccounts";
+import { usePeriod } from "../contexts/usePeriodo";
+import { isTransactionType } from "../utils/sortUtils";
+import ExpenseChart from "../features/charts/ExpenseChart";
 
 import "./Dashboard.css";
 
 export default function DashboardPage() {
-  
   const [open, setOpen] = useState(false);
+  const { launches } = useLaunches();
+  const { accounts } = useAccounts();
+  const { month } = usePeriod();
+
+  const dashboardData = useMemo(() => {
+    const now = new Date();
+    const currentDate = now.toISOString().split("T")[0];
+
+    // Saldo Atual: soma de todos os saldos das contas
+    const totalBalance = accounts.reduce((sum, acc) => sum + (acc.currentBalance || 0), 0);
+
+    // Lançamentos do mês selecionado
+    const selectedMonthLaunches = launches.filter(launch => {
+      const launchMonth = launch.date.substring(0, 7);
+      return launchMonth === month && !isTransactionType(launch.type, "transfer");
+    });
+
+    // Entradas do mês (receitas)
+    const monthlyIncome = selectedMonthLaunches
+      .filter(l => isTransactionType(l.type, "income"))
+      .reduce((sum, l) => sum + l.value, 0);
+
+    // Saídas do mês (despesas)
+    const monthlyExpense = selectedMonthLaunches
+      .filter(l => isTransactionType(l.type, "expense"))
+      .reduce((sum, l) => sum + Math.abs(l.value), 0);
+
+    // Resultado do mês
+    const monthlyResult = monthlyIncome - monthlyExpense;
+
+    // Últimos lançamentos (ordenados por data descendente, sem transferências)
+    const recentLaunches = launches
+      .filter(l => !isTransactionType(l.type, "transfer"))
+      .sort((a, b) => b.date.localeCompare(a.date))
+      .slice(0, 3);
+
+    // Próximos compromissos (recorrentes ou com data futura)
+    const upcomingLaunches = launches
+      .filter(l => {
+        const isRecurring = l.occurrenceType === "recurring";
+        const isFuture = l.date > currentDate;
+        return !isTransactionType(l.type, "transfer") && (isRecurring || isFuture);
+      })
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(0, 3);
+
+    return {
+      totalBalance,
+      monthlyIncome,
+      monthlyExpense,
+      monthlyResult,
+      recentLaunches,
+      upcomingLaunches,
+    };
+  }, [launches, accounts, month]);
+
+  const formatCurrency = (value: number) => {
+    return value.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    });
+  };
+
+  const formatDate = (dateStr: string) => {
+    const date = new Date(dateStr);
+    return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
+  };
 
   return (
-
     <>
-      {/* <Button onClick={() => setOpen(true)}>
-        Abrir modal
-      </Button> */}
-
       <Modal
         isOpen={open}
         title="Teste de Modal"
@@ -32,47 +98,65 @@ export default function DashboardPage() {
       >
         Conteúdo do modal aqui
       </Modal>
-    <div className="dashboard">      
 
-      {/* KPI CARDS */}
-      <div className="dashboard-kpis">
-        <Card title="Saldo Atual">
-          <span className="kpi-value">R$ 2.450,00</span>
-        </Card>
+      <div className="dashboard">
+        {/* KPI CARDS */}
+        <div className="dashboard-kpis">
+          <Card title="Saldo Atual">
+            <span className="kpi-value">{formatCurrency(dashboardData.totalBalance)}</span>
+          </Card>
 
-        <Card title="Entradas do mês">
-          <span className="kpi-value positive">R$ 5.000,00</span>
-        </Card>
+          <Card title="Entradas do mês">
+            <span className="kpi-value positive">{formatCurrency(dashboardData.monthlyIncome)}</span>
+          </Card>
 
-        <Card title="Saídas do mês">
-          <span className="kpi-value negative">R$ 2.550,00</span>
-        </Card>
+          <Card title="Saídas do mês">
+            <span className="kpi-value negative">{formatCurrency(dashboardData.monthlyExpense)}</span>
+          </Card>
 
-        <Card title="Resultado">
-          <span className="kpi-value positive">R$ 2.450,00</span>
+          <Card title="Resultado">
+            <span className={`kpi-value ${dashboardData.monthlyResult >= 0 ? "positive" : "negative"}`}>
+              {formatCurrency(dashboardData.monthlyResult)}
+            </span>
+          </Card>
+        </div>
+
+        {/* SEÇÃO INFERIOR */}
+        <div className="dashboard-grid">
+          <Card title="Últimos lançamentos">
+            {dashboardData.recentLaunches.length > 0 ? (
+              <ul className="list">
+                {dashboardData.recentLaunches.map((launch) => (
+                  <li key={launch.id}>
+                    {launch.description} — {formatCurrency(launch.value)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p style={{ color: "#999", fontSize: "14px" }}>Nenhum lançamento registrado</p>
+            )}
+          </Card>
+
+          <Card title="Próximos compromissos">
+            {dashboardData.upcomingLaunches.length > 0 ? (
+              <ul className="list">
+                {dashboardData.upcomingLaunches.map((launch) => (
+                  <li key={launch.id}>
+                    {launch.description} — {formatDate(launch.date)}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <p style={{ color: "#999", fontSize: "14px" }}>Nenhum compromisso futuro</p>
+            )}
+          </Card>
+        </div>
+
+        {/* GRÁFICO DE DESPESAS */}
+        <Card title="Despesas por categoria">
+          <ExpenseChart launches={launches} month={month} />
         </Card>
       </div>
-
-      {/* SEÇÃO INFERIOR */}
-      <div className="dashboard-grid">
-        <Card title="Últimos lançamentos">
-          <ul className="list">
-            <li>Mercado — R$ 120,00</li>
-            <li>Internet — R$ 99,90</li>
-            <li>Salário — R$ 5.000,00</li>
-          </ul>
-        </Card>
-
-        <Card title="Próximos compromissos">
-          <ul className="list">
-            <li>Cartão — 05/02</li>
-            <li>Aluguel — 10/02</li>
-            <li>Academia — 12/02</li>
-          </ul>
-        </Card>
-      </div>
-    </div>
-
     </>
   );
 }

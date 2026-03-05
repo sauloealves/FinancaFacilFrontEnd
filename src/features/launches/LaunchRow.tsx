@@ -27,29 +27,25 @@ export default function LaunchRow({row, onEdit}: Readonly<LaunchRowProps>) {
       tabIndex={0}
     >
       <span className="col-description">
-        {isTransactionType(row.type, "transfer") ? (
-          <span style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <span>⇄ Transferência</span>
-            <span style={{
-              display: 'inline-block',
-              padding: '2px 8px',
-              backgroundColor: '#e3f2fd',
-              color: '#1976d2',
-              borderRadius: '4px',
-              fontSize: '11px',
-              fontWeight: '600',
-              textTransform: 'uppercase'
-            }}>
-              Transfer
+        <span style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
+          {isTransactionType(row.type, "transfer") ? (
+            <>
+              <span>⇄ Transferência</span>
+              <span className="occurrence-tag transfer-tag">Transfer</span>
+            </>
+          )  : (
+            <span className="value-display" style={{ marginRight: '8px' }}>
+              {row.description}
             </span>
-          </span>
-        )  : (
-          <span
-            className="value-display"            
-          >
-            {row.description}
-          </span>
-        )}
+          )}
+          
+          {row.occurrenceType === "installment" && (
+            <span className="occurrence-tag installment-tag">Parcelado</span>
+          )}
+          {row.occurrenceType === "recurring" && (
+            <span className="occurrence-tag recurring-tag">Recorrente</span>
+          )}
+        </span>
       </span>
 
       <span className="col-account">

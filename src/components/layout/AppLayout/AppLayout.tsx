@@ -44,7 +44,7 @@ export default function AppLayout() {
           <div className="app-main">
             <Header
               title={title}
-              month={location.pathname === "/launches" ? month : undefined}
+              month={["/", "/launches", "/dashboard"].includes(location.pathname) ? month : undefined}
               onMonthChange={setMonth}
             />
             <main className="app-content">
