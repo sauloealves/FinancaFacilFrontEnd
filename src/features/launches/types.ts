@@ -3,12 +3,12 @@ export type OccurrenceType = "single" | "installment" | "recurring";
 
 export type AccountRef = {
   id: string;
-  name: string;
+  name?: string;
 };
 
 export type CategoryRef = {
   id: string;
-  name: string;
+  name?: string;
 };
 
 export type LaunchRow = {

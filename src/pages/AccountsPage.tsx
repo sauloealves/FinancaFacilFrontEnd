@@ -7,9 +7,7 @@ import {
 import AccountModal from "../features/accounts/components/AccountModal";
 import AccountTable from "../features/accounts/components/AccountTable";
 import type { Account } from "../features/accounts/types";
-import { calculateAccountCurrentBalance } from "../utils/calculateAccountCurrentBalance";
 import { useAccounts } from "../contexts/accounts/useAccounts";
-import { useLaunches } from "../contexts/launches/useLaunches";
 import "./AccountsPage.css";
 
 export default function AccountsPage() {
@@ -22,20 +20,11 @@ export default function AccountsPage() {
   reloadAccounts
 } = useAccounts();
 
-  const { launches } = useLaunches();
-
   const [editing, setEditing] =
     useState<Account | null>(null);
 
   const [showModal, setShowModal] =
     useState(false);
-
-  const balances = Object.fromEntries(
-    accounts.map((a) => [
-      a.id,
-      calculateAccountCurrentBalance(a, launches),
-    ])
-  );
 
   async function handleSave(data: {
     name: string;
@@ -95,7 +84,6 @@ export default function AccountsPage() {
 
       <AccountTable
         accounts={accounts}
-        balances={balances}
         onEdit={(account) => {
           setEditing(account);
           setShowModal(true);

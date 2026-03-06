@@ -5,14 +5,12 @@ type Props = {
   accounts: Account[];
   onEdit: (account: Account) => void;
   onDelete: (id: string) => void;
-  balances: Record<string, number>;
 };
 
 export default function AccountTable({
   accounts,
   onEdit,
   onDelete,
-  balances,
 }: Props) {
   return (
     <table className="accounts-table">

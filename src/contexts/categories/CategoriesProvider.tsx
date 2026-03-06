@@ -31,11 +31,6 @@ export function CategoriesProvider({ children }: Props) {
     setCategories(prev => prev.filter(c => c.id !== id));
   }
 
-  async function reloadCategories() {
-    const data = await getCategories();
-    setCategories(data);
-  }
-
   return (
     <CategoriesContext.Provider
       value={{ categories, reloadCategories: loadCategories, addCategory, editCategory, removeCategory }}

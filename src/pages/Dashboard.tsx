@@ -4,6 +4,7 @@ import { Card, Modal, Button } from "../components/ui";
 import { useLaunches } from "../contexts/launches/useLaunches";
 import { useAccounts } from "../contexts/accounts/useAccounts";
 import { usePeriod } from "../contexts/usePeriodo";
+import { useAccountFilter } from "../contexts/AccountFilterContext";
 import { isTransactionType } from "../utils/sortUtils";
 import ExpenseChart from "../features/charts/ExpenseChart";
 
@@ -14,16 +15,39 @@ export default function DashboardPage() {
   const { launches } = useLaunches();
   const { accounts } = useAccounts();
   const { month } = usePeriod();
+  const { selectedAccounts } = useAccountFilter();
 
   const dashboardData = useMemo(() => {
     const now = new Date();
     const currentDate = now.toISOString().split("T")[0];
 
+    const filteredLaunches =
+      selectedAccounts.length === 0
+        ? launches
+        : launches.filter((launch) => {
+            if (isTransactionType(launch.type, "transfer")) {
+              return (
+                selectedAccounts.includes(launch.fromAccount?.id ?? "") ||
+                selectedAccounts.includes(launch.toAccount?.id ?? "")
+              );
+            }
+
+            return selectedAccounts.includes(launch.account?.id ?? "");
+          });
+
+    const filteredAccounts =
+      selectedAccounts.length === 0
+        ? accounts
+        : accounts.filter((account) => selectedAccounts.includes(account.id));
+
     // Saldo Atual: soma de todos os saldos das contas
-    const totalBalance = accounts.reduce((sum, acc) => sum + (acc.currentBalance || 0), 0);
+    const totalBalance = filteredAccounts.reduce(
+      (sum, acc) => sum + (acc.currentBalance || 0),
+      0
+    );
 
     // Lançamentos do mês selecionado
-    const selectedMonthLaunches = launches.filter(launch => {
+    const selectedMonthLaunches = filteredLaunches.filter((launch) => {
       const launchMonth = launch.date.substring(0, 7);
       return launchMonth === month && !isTransactionType(launch.type, "transfer");
     });
@@ -42,13 +66,13 @@ export default function DashboardPage() {
     const monthlyResult = monthlyIncome - monthlyExpense;
 
     // Últimos lançamentos (ordenados por data descendente, sem transferências)
-    const recentLaunches = launches
+    const recentLaunches = filteredLaunches
       .filter(l => !isTransactionType(l.type, "transfer"))
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 3);
 
     // Próximos compromissos (recorrentes ou com data futura)
-    const upcomingLaunches = launches
+    const upcomingLaunches = filteredLaunches
       .filter(l => {
         const isRecurring = l.occurrenceType === "recurring";
         const isFuture = l.date > currentDate;
@@ -64,8 +88,9 @@ export default function DashboardPage() {
       monthlyResult,
       recentLaunches,
       upcomingLaunches,
+      filteredLaunches,
     };
-  }, [launches, accounts, month]);
+  }, [launches, accounts, month, selectedAccounts]);
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString("pt-BR", {
@@ -154,7 +179,7 @@ export default function DashboardPage() {
 
         {/* GRÁFICO DE DESPESAS */}
         <Card title="Despesas por categoria">
-          <ExpenseChart launches={launches} month={month} />
+          <ExpenseChart launches={dashboardData.filteredLaunches} month={month} />
         </Card>
       </div>
     </>

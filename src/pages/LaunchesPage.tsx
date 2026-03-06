@@ -20,7 +20,7 @@ export default function LaunchesPage() {
   const [openingBalance, setOpeningBalance] = useState<number>(0);
   const [loadingBalance, setLoadingBalance] = useState<boolean>(true);
   const { selectedAccounts } = useAccountFilter();
-  const { launches, updateLaunch, reloadLaunches } = useLaunches();
+  const { launches, reloadLaunches } = useLaunches();
   const { reloadAccounts } = useAccounts();
 
   // Carrega o saldo inicial quando o mês ou contas selecionadas mudarem
@@ -76,7 +76,7 @@ export default function LaunchesPage() {
       <EditLaunchModal
         launch={editing}
         onClose={() => setEditing(null)}
-        onSave={async (updated) => {
+        onSave={async () => {
             await reloadLaunches();
             await reloadAccounts();
             setEditing(null);

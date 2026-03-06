@@ -5,7 +5,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   Cell,
 } from "recharts";
@@ -89,7 +88,7 @@ export default function ExpenseChart({ launches, month }: ExpenseChartProps) {
         />
         <Tooltip
           formatter={(value) =>
-            value.toLocaleString("pt-BR", {
+            Number(value ?? 0).toLocaleString("pt-BR", {
               style: "currency",
               currency: "BRL",
             })
@@ -101,7 +100,7 @@ export default function ExpenseChart({ launches, month }: ExpenseChartProps) {
           }}
         />
         <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-          {expensesByCategory.map((entry, index) => (
+          {expensesByCategory.map((_, index) => (
             <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
           ))}
         </Bar>

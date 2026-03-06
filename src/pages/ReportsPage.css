@@ -1,0 +1,264 @@
+.reports-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.reports-toolbar {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: var(--space-2) var(--space-3);
+}
+
+.report-type {
+  background: #5f8f1f;
+  color: var(--white);
+  padding: 8px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.date-range {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.date-range label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--gray-700);
+}
+
+.date-range input {
+  height: 34px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  padding: 0 8px;
+  font-size: 13px;
+}
+
+.apply-btn,
+.export-btn,
+.export-menu button {
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.apply-btn {
+  background: var(--gray-100);
+  font-weight: 600;
+}
+
+.export-menu-wrapper {
+  position: relative;
+  margin-left: auto;
+}
+
+.export-btn {
+  font-weight: 600;
+}
+
+.export-menu {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08);
+  display: flex;
+  flex-direction: column;
+  min-width: 160px;
+  z-index: 10;
+}
+
+.export-menu button {
+  border: none;
+  border-bottom: 1px solid var(--gray-100);
+  text-align: left;
+}
+
+.export-menu button:last-child {
+  border-bottom: none;
+}
+
+.export-menu button:hover {
+  background: var(--gray-100);
+}
+
+.report-table-wrapper {
+  overflow: auto;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  background: var(--white);
+}
+
+.report-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.report-table thead th {
+  position: sticky;
+  top: 0;
+  background: #f4f6f8;
+  border-bottom: 1px solid var(--gray-300);
+  color: var(--gray-700);
+  font-weight: 700;
+  text-align: right;
+  padding: 10px 8px;
+}
+
+.report-table thead th:first-child {
+  text-align: left;
+}
+
+.report-table td {
+  border-bottom: 1px solid #eef1f4;
+  text-align: right;
+  padding: 8px;
+  white-space: nowrap;
+}
+
+.report-table td:first-child {
+  text-align: left;
+}
+
+.section-row {
+  font-weight: 700;
+}
+
+.section-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.section-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid currentColor;
+  border-radius: 3px;
+  font-size: 12px;
+  line-height: 1;
+}
+
+.section-row.income {
+  color: #0d6b30;
+  background: #f3fbf6;
+}
+
+.section-row.expense {
+  color: #9b1c1c;
+  background: #fff5f5;
+}
+
+.category-row {
+  font-weight: 600;
+  background: #f8fafc;
+}
+
+.category-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0;
+  font: inherit;
+  font-weight: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+.category-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #7c8a99;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1;
+  color: #4c5b6b;
+}
+
+.subcategory-row td:first-child {
+  padding-left: 24px;
+  color: var(--gray-700);
+}
+
+.balance-row {
+  font-weight: 700;
+  color: #0f5fa8;
+  background: #edf5ff;
+}
+
+@media (max-width: 900px) {
+  .export-menu-wrapper {
+    margin-left: 0;
+  }
+}
+
+@media print {
+  .sidebar,
+  .header,
+  .reports-toolbar {
+    display: none !important;
+  }
+
+  .app-layout,
+  .app-main,
+  .app-content,
+  .reports-page {
+    display: block !important;
+    height: auto !important;
+    overflow: visible !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    background: #fff !important;
+  }
+
+  .report-table-wrapper {
+    border: none;
+    overflow: visible;
+  }
+
+  .report-table {
+    min-width: 0;
+    width: 100%;
+    font-size: 11px;
+  }
+
+  .report-table thead th {
+    position: static;
+  }
+}

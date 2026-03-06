@@ -37,11 +37,6 @@ export function AccountsProvider({ children }: Props) {
     );
   }
 
-  async function reloadAccounts() {
-    const data = await getAccounts();
-    setAccounts(data);
-  }
-
   return (
     <AccountsContext.Provider
       value={{

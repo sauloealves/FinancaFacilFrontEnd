@@ -3,6 +3,7 @@ import "./Input.css";
 type InputProps = {
   label?: string;
   type?: string;
+  className?: string;
   value: string;
   placeholder?: string;
   error?: string;
@@ -14,6 +15,7 @@ type InputProps = {
 export default function Input({
   label,
   type = "text",
+  className,
   value,
   placeholder,
   error,
@@ -22,7 +24,7 @@ export default function Input({
   onKeyDown,
 }: Readonly<InputProps>) {
   return (
-    <div className="input-group">
+    <div className={`input-group${className ? ` ${className}` : ""}`}>
       {label && <label>{label}</label>}
       <input
         type={type}

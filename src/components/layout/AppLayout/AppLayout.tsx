@@ -4,7 +4,6 @@ import Header from "../Header/Header";
 
 import { Outlet, useLocation } from "react-router-dom";
 import { usePeriod } from "../../../contexts/usePeriodo";
-import { useState } from "react";
 import { AccountFilterProvider } from "../../../contexts/AccountFilterContext";
 import { LaunchesProvider } from "../../../contexts/launches/LaunchesProvider";
 
@@ -22,24 +21,12 @@ export default function AppLayout() {
   const location = useLocation();
   const title = titles[location.pathname] ?? "Página Inicial";
   const { month, setMonth } = usePeriod();
-  const [selectedAccounts, setSelectedAccounts] = useState<string[]>([]);
-  
-  function toggleAccount(accountId: string) {
-    setSelectedAccounts(prev =>
-      prev.includes(accountId)
-        ? prev.filter(id => id !== accountId)
-        : [...prev, accountId]
-    );
-  }
 
   return (
     <LaunchesProvider>
       <AccountFilterProvider>
         <div className="app-layout">
-          <Sidebar 
-            selectedAccounts={selectedAccounts}
-            onToggleAccount={toggleAccount}
-          />
+          <Sidebar />
 
           <div className="app-main">
             <Header

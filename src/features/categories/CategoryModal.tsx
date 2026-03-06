@@ -93,8 +93,8 @@ export default function CategoryModal({
             <SearchableSelect<Category>
               label="Categoria Pai (opcional)"
               items={availableParents}
-              selectedValue={parentId}
-              onSelect={setParentId}
+              selectedValue={parentId ?? ""}
+              onSelect={(value) => setParentId(value || null)}
               getLabel={(c) => c.name}
               getId={(c) => c.id}
               placeholder="Buscar categoria pai..."
