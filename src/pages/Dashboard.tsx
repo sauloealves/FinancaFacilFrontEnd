@@ -1,17 +1,22 @@
 
 import { useState, useMemo } from "react";
-import { Card, Modal, Button } from "../components/ui";
+import { Card, Modal, Button, Input } from "../components/ui";
 import { useLaunches } from "../contexts/launches/useLaunches";
 import { useAccounts } from "../contexts/accounts/useAccounts";
 import { usePeriod } from "../contexts/usePeriodo";
 import { useAccountFilter } from "../contexts/AccountFilterContext";
 import { isTransactionType } from "../utils/sortUtils";
 import ExpenseChart from "../features/charts/ExpenseChart";
+import { askAi } from "../services/aiService";
 
 import "./Dashboard.css";
 
 export default function DashboardPage() {
   const [open, setOpen] = useState(false);
+  const [aiQuery, setAiQuery] = useState("");
+  const [aiResponse, setAiResponse] = useState("");
+  const [aiError, setAiError] = useState("");
+  const [isAskingAi, setIsAskingAi] = useState(false);
   const { launches } = useLaunches();
   const { accounts } = useAccounts();
   const { month } = usePeriod();
@@ -104,6 +109,28 @@ export default function DashboardPage() {
     return date.toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" });
   };
 
+  async function handleAskAi() {
+    const trimmedQuery = aiQuery.trim();
+    if (!trimmedQuery) {
+      setAiError("Digite uma pergunta para consultar a IA.");
+      setAiResponse("");
+      return;
+    }
+
+    try {
+      setIsAskingAi(true);
+      setAiError("");
+      const response = await askAi(trimmedQuery);
+      setAiResponse(response);
+    } catch (error) {
+      console.error("Erro ao consultar IA:", error);
+      setAiResponse("");
+      setAiError("Não foi possível consultar a IA agora. Tente novamente.");
+    } finally {
+      setIsAskingAi(false);
+    }
+  }
+
   return (
     <>
       <Modal
@@ -180,6 +207,39 @@ export default function DashboardPage() {
         {/* GRÁFICO DE DESPESAS */}
         <Card title="Despesas por categoria">
           <ExpenseChart launches={dashboardData.filteredLaunches} month={month} />
+        </Card>
+
+        <Card title="Pergunte para a IA">
+          <div className="dashboard-ai">
+            <p className="dashboard-ai-hint">
+              Faça uma pergunta sobre seus gastos, receitas ou comportamento financeiro.
+            </p>
+
+            <div className="dashboard-ai-form">
+              <Input
+                label="Pergunta"
+                value={aiQuery}
+                placeholder="Ex: Quanto gastei neste mês?"
+                onChange={(e) => setAiQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    handleAskAi();
+                  }
+                }}
+              />
+              <Button onClick={handleAskAi} disabled={isAskingAi}>
+                {isAskingAi ? "Consultando..." : "Perguntar"}
+              </Button>
+            </div>
+
+            {aiError && <p className="dashboard-ai-error">{aiError}</p>}
+
+            {aiResponse && (
+              <div className="dashboard-ai-response">
+                {aiResponse}
+              </div>
+            )}
+          </div>
         </Card>
       </div>
     </>

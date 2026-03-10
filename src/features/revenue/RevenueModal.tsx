@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
 import { useLaunches } from "../../contexts/launches/useLaunches";
+import { useAccountFilter } from "../../contexts/AccountFilterContext";
 import { createCategory } from "../../services/categoryService";
 import { createTransaction } from "../../services/launchService";
 import CategoryModal from "../categories/CategoryModal";
@@ -10,6 +11,7 @@ import { Modal, Input, Button } from "../../components/ui";
 import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
 import "./RevenueModal.css";
 import { sortAccountsAlphabetically, sortCategoriesHierarchically } from "../../utils/sortUtils";
+import { parseBRL } from "../../utils/currency";
 
 type RevenueModalProps = {
   isOpen: boolean;
@@ -42,17 +44,21 @@ export default function RevenueModal({
     const { accounts, addAccount, reloadAccounts } = useAccounts();
     const { categories, addCategory, reloadCategories } = useCategories();
     const { reloadLaunches } = useLaunches();
+    const { selectedAccounts } = useAccountFilter();
     const [type, setType] = useState<LaunchType>("single");
     const [errors, setErrors] = useState<FormErrors>({});
     const [submitError, setSubmitError] = useState<string>("");
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showAccountModal, setShowAccountModal] = useState(false);
+    const descriptionInputRef = useRef<HTMLInputElement>(null);
+    const selectedSidebarAccountId =
+      selectedAccounts.find(id => accounts.some(account => account.id === id)) ?? "";
 
     const [form, setForm] = useState<FormState>({
         description: "",
         value: "",
         category: "",
-        account: "",
+      account: selectedSidebarAccountId,
         startDate: "",
         installmentFrom: 1,
         installmentTo: 1,
@@ -61,6 +67,14 @@ export default function RevenueModal({
         endDate: "",    
     });
 
+    useEffect(() => {
+      if (!isOpen) return;
+      setForm(prev => ({
+        ...prev,
+        account: selectedSidebarAccountId,
+      }));
+    }, [isOpen, selectedSidebarAccountId]);
+
     function validate(): boolean {
         const newErrors: FormErrors = {};
 
@@ -68,7 +82,7 @@ export default function RevenueModal({
             newErrors.description = "Descrição é obrigatória";
         }
 
-        if (!form.value || Number(form.value) <= 0) {
+        if (!form.value || parseBRL(form.value) <= 0) {
             newErrors.value = "Informe um valor válido";
         }
 
@@ -123,7 +137,9 @@ export default function RevenueModal({
             case "description":
                 return String(value).trim() ? "" : "Descrição é obrigatória";
             case "value":
-                return value && Number(value) > 0 ? "" : "Informe um valor válido";
+              return typeof value === "string" && parseBRL(value) > 0
+                ? ""
+                : "Informe um valor válido";
             case "category":
                 return value ? "" : "Selecione uma categoria";
             case "account":
@@ -150,7 +166,7 @@ export default function RevenueModal({
         const revenue = {
             type: "income" as const,
             description: form.description.trim(),
-            value: Number(form.value),
+            value: parseBRL(form.value),
             categoryId: form.category,
             accountId: form.account,
             startDate: form.startDate,
@@ -169,8 +185,8 @@ export default function RevenueModal({
             .then(async () => {
                 await reloadLaunches();
                 await reloadAccounts();
-                onClose();
-                resetForm();
+            resetForm(form.startDate);
+            globalThis.setTimeout(() => descriptionInputRef.current?.focus(), 0);
             })
             .catch((err) => {
                 console.error("Erro ao criar receita:", err);
@@ -179,13 +195,13 @@ export default function RevenueModal({
             });
     }
 
-    function resetForm() {
+    function resetForm(preservedStartDate: string) {
         setForm({
             description: "",
             value: "",
             category: "",
-            account: "",
-            startDate: "",
+          account: selectedSidebarAccountId,
+        startDate: preservedStartDate,
             installmentFrom: 1,
             installmentTo: 1,
             recurrence: "monthly",
@@ -193,6 +209,7 @@ export default function RevenueModal({
             endDate: "",
         });
         setErrors({});
+      setSubmitError("");
         setType("single");
     }
 
@@ -270,6 +287,7 @@ export default function RevenueModal({
 
         <Input
           label="Descrição"
+          inputRef={descriptionInputRef}
           value={form.description}
           error={errors.description}
           onChange={e => {  
@@ -352,42 +370,41 @@ export default function RevenueModal({
       <div className="revenue-section">
         <fieldset className="section-label">
           <legend>Tipo de lançamento</legend>
+          <div className="radio-group">
+            <label htmlFor="revenue-type-single">
+              <input
+                id="revenue-type-single"
+                type="radio"
+                checked={type === "single"}
+                onChange={() => setType("single")}
+              />
+              {" "}
+              Lançamento único
+            </label>
+
+            <label htmlFor="revenue-type-installment">
+              <input
+                id="revenue-type-installment"
+                type="radio"
+                checked={type === "installment"}
+                onChange={() => setType("installment")}
+              />
+              {" "}
+              Parcelado
+            </label>
+
+            <label htmlFor="revenue-type-recurring">
+              <input
+                id="revenue-type-recurring"
+                type="radio"
+                checked={type === "recurring"}
+                onChange={() => setType("recurring")}
+              />
+              {" "}
+              Recorrente
+            </label>
+          </div>
         </fieldset>
-
-        <div className="radio-group">
-          <label htmlFor="revenue-type-single">
-            <input
-              id="revenue-type-single"
-              type="radio"
-              checked={type === "single"}
-              onChange={() => setType("single")}
-            />
-            {" "}
-            Lançamento único
-          </label>
-
-          <label htmlFor="revenue-type-installment">
-            <input
-              id="revenue-type-installment"
-              type="radio"
-              checked={type === "installment"}
-              onChange={() => setType("installment")}
-            />
-            {" "}
-            Parcelado
-          </label>
-
-          <label htmlFor="revenue-type-recurring">
-            <input
-              id="revenue-type-recurring"
-              type="radio"
-              checked={type === "recurring"}
-              onChange={() => setType("recurring")}
-            />
-            {" "}
-            Recorrente
-          </label>
-        </div>
       </div>
 
       {/* PARCELAMENTO */}
@@ -395,46 +412,45 @@ export default function RevenueModal({
         <div className="revenue-section">
           <fieldset className="section-label">
             <legend>Parcelamento</legend>
+            <div className="installment-group">
+              <Input
+                label="De"
+                value={String(form.installmentFrom)}
+                error={errors.installmentFrom}
+                onChange={e =>
+                  setForm({
+                    ...form,
+                    installmentFrom: Number(e.target.value),
+                  })
+                }
+              />
+
+              <Input
+                label="Até"
+                value={String(form.installmentTo)}
+                error={errors.installmentTo}
+                onChange={e => {
+                      const value = Number(e.target.value);
+                      setForm({ ...form, installmentTo: value });
+
+                      if (type === "installment") {
+                          if (value < form.installmentFrom) {
+                              setErrors(prev => ({
+                              ...prev,
+                              installmentTo: "Parcela final deve ser maior ou igual à inicial",
+                              }));
+                          } else {
+                              setErrors(prev => {
+                              const next = { ...prev };
+                              delete next.installmentTo;
+                              return next;
+                              });
+                          }
+                      }
+                  }}
+              />
+            </div>
           </fieldset>
-
-          <div className="installment-group">
-            <Input
-              label="De"
-              value={String(form.installmentFrom)}
-              error={errors.installmentFrom}
-              onChange={e =>
-                setForm({
-                  ...form,
-                  installmentFrom: Number(e.target.value),
-                })
-              }
-            />
-
-            <Input
-              label="Até"
-              value={String(form.installmentTo)}
-              error={errors.installmentTo}
-              onChange={e => {
-                    const value = Number(e.target.value);
-                    setForm({ ...form, installmentTo: value });
-
-                    if (type === "installment") {
-                        if (value < form.installmentFrom) {
-                            setErrors(prev => ({
-                            ...prev,
-                            installmentTo: "Parcela final deve ser maior ou igual à inicial",
-                            }));
-                        } else {
-                            setErrors(prev => {
-                            const next = { ...prev };
-                            delete next.installmentTo;
-                            return next;
-                            });
-                        }
-                    }
-                }}
-            />
-          </div>
         </div>
       )}
 
@@ -443,53 +459,52 @@ export default function RevenueModal({
         <div className="revenue-section">
           <fieldset className="section-label">
             <legend>Recorrência</legend>
-          </fieldset>
-
-          <select
-            className="revenue-select"
-            value={form.recurrence}
-            onChange={e => {
-              const value = e.target.value as RecurrenceType;
-              setForm({ ...form, recurrence: value });
-            }}
-          >
-            <option value="weekly">Semanal</option>
-            <option value="biweekly">Quinzenal</option>
-            <option value="monthly">Mensal</option>
-            <option value="yearly">Anual</option>
-            <option value="indefinite">Indefinido</option>
-          </select>
-
-          <label htmlFor="revenue-has-end-date" className="checkbox-group">
-            <input
-              id="revenue-has-end-date"
-              type="checkbox"
-              checked={form.hasEndDate}
-              onChange={e =>
-                setForm({
-                  ...form,
-                  hasEndDate: e.target.checked,
-                  endDate: e.target.checked ? form.endDate : "",
-                })
-              }
-            />
-            {" "}
-            Definir data final
-          </label>
-
-          {form.hasEndDate && (
-            <Input
-              label="Data final"
-              type="date"
-              value={form.endDate}
-              error={errors.endDate}
+            <select
+              className="revenue-select"
+              value={form.recurrence}
               onChange={e => {
-                const v = e.target.value;
-                setForm({ ...form, endDate: v });
-                validateField("endDate", v);
+                const value = e.target.value as RecurrenceType;
+                setForm({ ...form, recurrence: value });
               }}
-            />
-          )}
+            >
+              <option value="weekly">Semanal</option>
+              <option value="biweekly">Quinzenal</option>
+              <option value="monthly">Mensal</option>
+              <option value="yearly">Anual</option>
+              <option value="indefinite">Indefinido</option>
+            </select>
+
+            <label htmlFor="revenue-has-end-date" className="checkbox-group">
+              <input
+                id="revenue-has-end-date"
+                type="checkbox"
+                checked={form.hasEndDate}
+                onChange={e =>
+                  setForm({
+                    ...form,
+                    hasEndDate: e.target.checked,
+                    endDate: e.target.checked ? form.endDate : "",
+                  })
+                }
+              />
+              {" "}
+              Definir data final
+            </label>
+
+            {form.hasEndDate && (
+              <Input
+                label="Data final"
+                type="date"
+                value={form.endDate}
+                error={errors.endDate}
+                onChange={e => {
+                  const v = e.target.value;
+                  setForm({ ...form, endDate: v });
+                  validateField("endDate", v);
+                }}
+              />
+            )}
+          </fieldset>
         </div>
       )}
         {showCategoryModal && (

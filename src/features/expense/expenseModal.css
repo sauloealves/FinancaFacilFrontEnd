@@ -6,9 +6,17 @@
 }
 
 .section-label {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
   font-size: var(--font-label);
   font-weight: 500;
   color: var(--gray-700);
+}
+
+.section-label legend {
+  padding: 0 6px;
 }
 
 .radio-group {

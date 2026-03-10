@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
 import { useLaunches } from "../../contexts/launches/useLaunches";
+import { useAccountFilter } from "../../contexts/AccountFilterContext";
 import { createCategory } from "../../services/categoryService";
 import { createTransaction } from "../../services/launchService";
 import CategoryModal from "../categories/CategoryModal";
@@ -10,6 +11,7 @@ import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSel
 import "./expenseModal.css";
 import AccountModal from "../accounts/components/AccountModal";
 import { sortCategoriesHierarchically } from "../../utils/sortUtils";
+import { parseBRL } from "../../utils/currency";
 
 type ExpenseModalProps = {
   isOpen: boolean;
@@ -41,17 +43,21 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
   const { accounts, addAccount, reloadAccounts } = useAccounts();
   const { categories, addCategory, reloadCategories } = useCategories();
   const { reloadLaunches } = useLaunches();
+  const { selectedAccounts } = useAccountFilter();
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string>("");
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
+  const descriptionInputRef = useRef<HTMLInputElement>(null);
+  const selectedSidebarAccountId =
+    selectedAccounts.find(id => accounts.some(account => account.id === id)) ?? "";
 
   const [form, setForm] = useState<FormState>({
     description: "",
     value: "",
     category: "",
-    account: "",
+    account: selectedSidebarAccountId,
     startDate: "",
     installmentFrom: 1,
     installmentTo: 1,
@@ -59,6 +65,14 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
     hasEndDate: false,
     endDate: "",
   });
+
+  useEffect(() => {
+    if (!isOpen) return;
+    setForm(prev => ({
+      ...prev,
+      account: selectedSidebarAccountId,
+    }));
+  }, [isOpen, selectedSidebarAccountId]);
 
   function changeType(newType: LaunchType) {
     setType(newType);
@@ -69,7 +83,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
     const e: FormErrors = {};
 
     if (!form.description.trim()) e.description = "Descrição é obrigatória";
-    if (!form.value || Number(form.value) <= 0) e.value = "Informe um valor válido";
+    if (!form.value || parseBRL(form.value) <= 0) e.value = "Informe um valor válido";
     if (!form.category) e.category = "Selecione uma categoria";
     if (!form.startDate) e.startDate = "Data Lançamento é obrigatória";
     if (!form.account) e.account = "Selecione uma conta";
@@ -110,7 +124,9 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
       case "description":
         return String(value).trim() ? "" : "Descrição é obrigatória";
       case "value":
-        return value && Number(value) > 0 ? "" : "Informe um valor válido";
+        return typeof value === "string" && parseBRL(value) > 0
+          ? ""
+          : "Informe um valor válido";
       case "category":
         return value ? "" : "Selecione uma categoria";
       case "account":
@@ -138,7 +154,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
     const expense = {
       type: "expense" as const,
       description: form.description.trim(),
-      value: Number(form.value),
+      value: parseBRL(form.value),
       categoryId: form.category,
       accountId: form.account,
       startDate: form.startDate,
@@ -157,8 +173,8 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
       .then(async () => {
         await reloadLaunches();
         await reloadAccounts();
-        onClose();
-        resetForm();
+        resetForm(form.startDate);
+        globalThis.setTimeout(() => descriptionInputRef.current?.focus(), 0);
       })
       .catch((err) => {
         console.error("Erro ao criar despesa:", err);
@@ -167,13 +183,13 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
       });
   }
 
-  function resetForm() {
+  function resetForm(preservedStartDate: string) {
     setForm({
       description: "",
       value: "",
       category: "",
-      account: "",
-      startDate: "",
+      account: selectedSidebarAccountId,
+      startDate: preservedStartDate,
       installmentFrom: 1,
       installmentTo: 1,
       recurrence: "monthly",
@@ -181,6 +197,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
       endDate: "",
     });
     setErrors({});
+    setSubmitError("");
     setType("single");
   }
 
@@ -255,6 +272,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
 
         <Input
           label="Descrição"
+          inputRef={descriptionInputRef}
           value={form.description}
           error={errors.description}          
           onChange={e => {
@@ -333,24 +351,24 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
       <div className="expense-section">
         <fieldset className="section-label">
           <legend>Tipo de lançamento</legend>
+          <div className="radio-group">
+            <label htmlFor="type-single">
+              <input id="type-single" type="radio" checked={type === "single"} onChange={() => changeType("single")} />
+              {" "}
+              Lançamento único
+            </label>
+            <label htmlFor="type-installment">
+              <input id="type-installment" type="radio" checked={type === "installment"} onChange={() => changeType("installment")} />
+              {" "}
+              Parcelado
+            </label>
+            <label htmlFor="type-recurring">
+              <input id="type-recurring" type="radio" checked={type === "recurring"} onChange={() => changeType("recurring")} />
+              {" "}
+              Recorrente
+            </label>
+          </div>
         </fieldset>
-        <div className="radio-group">
-          <label htmlFor="type-single">
-            <input id="type-single" type="radio" checked={type === "single"} onChange={() => changeType("single")} />
-            {" "}
-            Lançamento único
-          </label>
-          <label htmlFor="type-installment">
-            <input id="type-installment" type="radio" checked={type === "installment"} onChange={() => changeType("installment")} />
-            {" "}
-            Parcelado
-          </label>
-          <label htmlFor="type-recurring">
-            <input id="type-recurring" type="radio" checked={type === "recurring"} onChange={() => changeType("recurring")} />
-            {" "}
-            Recorrente
-          </label>
-        </div>
       </div>
 
       {/* PARCELAMENTO */}
@@ -358,34 +376,34 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
         <div className="expense-section">
           <fieldset className="section-label">
             <legend>Parcelamento</legend>
-          </fieldset>
-          <div className="installment-group">
-            <Input
-              label="De"
-              value={String(form.installmentFrom)}
-              onChange={e =>
-                setForm({ ...form, installmentFrom: Number(e.target.value) })
-              }
-            />
-            <Input
-              label="Até"
-              value={String(form.installmentTo)}
-              error={errors.installmentTo}
-              onChange={e => {
-                const v = Number(e.target.value);
-                setForm({ ...form, installmentTo: v });
-                if (v < form.installmentFrom || v <= 1) {
-                  setErrors(prev => ({ ...prev, installmentTo: "Parcela inválida" }));
-                } else {
-                  setErrors(prev => {
-                    const n = { ...prev };
-                    delete n.installmentTo;
-                    return n;
-                  });
+            <div className="installment-group">
+              <Input
+                label="De"
+                value={String(form.installmentFrom)}
+                onChange={e =>
+                  setForm({ ...form, installmentFrom: Number(e.target.value) })
                 }
-              }}
-            />
-          </div>
+              />
+              <Input
+                label="Até"
+                value={String(form.installmentTo)}
+                error={errors.installmentTo}
+                onChange={e => {
+                  const v = Number(e.target.value);
+                  setForm({ ...form, installmentTo: v });
+                  if (v < form.installmentFrom || v <= 1) {
+                    setErrors(prev => ({ ...prev, installmentTo: "Parcela inválida" }));
+                  } else {
+                    setErrors(prev => {
+                      const n = { ...prev };
+                      delete n.installmentTo;
+                      return n;
+                    });
+                  }
+                }}
+              />
+            </div>
+          </fieldset>
         </div>
       )}
 
@@ -394,53 +412,52 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
         <div className="expense-section">
           <fieldset className="section-label">
             <legend>Recorrência</legend>
-          </fieldset>
-
-          <select
-            className="expense-select"
-            value={form.recurrence}
-            onChange={e => {
-              const value = e.target.value as RecurrenceType;
-              setForm({ ...form, recurrence: value });
-            }}
-          >
-            <option value="weekly">Semanal</option>
-            <option value="biweekly">Quinzenal</option>
-            <option value="monthly">Mensal</option>
-            <option value="yearly">Anual</option>
-            <option value="indefinite">Indefinido</option>
-          </select>
-
-          <label htmlFor="has-end-date" className="checkbox-group">
-            <input
-              id="has-end-date"
-              type="checkbox"
-              checked={form.hasEndDate}
-              onChange={e =>
-                setForm({
-                  ...form,
-                  hasEndDate: e.target.checked,
-                  endDate: e.target.checked ? form.endDate : "",
-                })
-              }
-            />
-            {" "}
-            Definir data final
-          </label>
-
-          {form.hasEndDate && (
-            <Input
-              label="Data final"
-              type="date"
-              value={form.endDate}
-              error={errors.endDate}
+            <select
+              className="expense-select"
+              value={form.recurrence}
               onChange={e => {
-                const v = e.target.value;
-                setForm({ ...form, endDate: v });
-                validateField("endDate", v);
+                const value = e.target.value as RecurrenceType;
+                setForm({ ...form, recurrence: value });
               }}
-            />
-          )}
+            >
+              <option value="weekly">Semanal</option>
+              <option value="biweekly">Quinzenal</option>
+              <option value="monthly">Mensal</option>
+              <option value="yearly">Anual</option>
+              <option value="indefinite">Indefinido</option>
+            </select>
+
+            <label htmlFor="has-end-date" className="checkbox-group">
+              <input
+                id="has-end-date"
+                type="checkbox"
+                checked={form.hasEndDate}
+                onChange={e =>
+                  setForm({
+                    ...form,
+                    hasEndDate: e.target.checked,
+                    endDate: e.target.checked ? form.endDate : "",
+                  })
+                }
+              />
+              {" "}
+              Definir data final
+            </label>
+
+            {form.hasEndDate && (
+              <Input
+                label="Data final"
+                type="date"
+                value={form.endDate}
+                error={errors.endDate}
+                onChange={e => {
+                  const v = e.target.value;
+                  setForm({ ...form, endDate: v });
+                  validateField("endDate", v);
+                }}
+              />
+            )}
+          </fieldset>
         </div>
       )}
       {showAccountModal && (

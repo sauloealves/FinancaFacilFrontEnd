@@ -48,3 +48,41 @@
 .list li {
   font-size: var(--font-body);
 }
+
+.dashboard-ai {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.dashboard-ai-hint {
+  margin: 0;
+  color: var(--gray-600);
+  font-size: var(--font-body);
+}
+
+.dashboard-ai-form {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+}
+
+.dashboard-ai-form .btn {
+  align-self: flex-start;
+}
+
+.dashboard-ai-error {
+  margin: 0;
+  color: var(--danger);
+  font-size: var(--font-body);
+}
+
+.dashboard-ai-response {
+  margin: 0;
+  padding: var(--space-3);
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: var(--gray-50);
+  color: var(--gray-800);
+  line-height: 1.45;
+}

@@ -8,6 +8,7 @@ type InputProps = {
   placeholder?: string;
   error?: string;
   autoFocus?: boolean;
+  inputRef?: React.Ref<HTMLInputElement>;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onKeyDown?: (e: React.KeyboardEvent<HTMLInputElement>) => void;
 };
@@ -20,13 +21,19 @@ export default function Input({
   placeholder,
   error,
   autoFocus = false,
+  inputRef,
   onChange,
   onKeyDown,
 }: Readonly<InputProps>) {
+  const inputGroupClassName = className
+    ? `input-group ${className}`
+    : "input-group";
+
   return (
-    <div className={`input-group${className ? ` ${className}` : ""}`}>
+    <div className={inputGroupClassName}>
       {label && <label>{label}</label>}
       <input
+        ref={inputRef}
         type={type}
         value={value}
         placeholder={placeholder}
