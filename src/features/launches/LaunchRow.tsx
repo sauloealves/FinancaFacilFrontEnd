@@ -6,27 +6,18 @@ import { isTransactionType } from "../../utils/sortUtils";
 type LaunchRowProps = {
   row: LaunchRowType;
   onEdit: (row: LaunchRowType) => void;
+  onDelete: (row: LaunchRowType) => void;
 };
 
-export default function LaunchRow({row, onEdit}: Readonly<LaunchRowProps>) {
+export default function LaunchRow({row, onEdit, onDelete}: Readonly<LaunchRowProps>) {
 
   return (
-    <div 
-      className={`launch-row ${row.type}`} 
-      onClick={() => {
-        onEdit(row);
-        console.log("Clicou na linha", row);
-      }}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          onEdit(row);
-        }
-      }}
-      role="button"
-      tabIndex={0}
-    >
-      <span className="col-description">
+    <div className={`launch-row ${row.type}`}>
+      <button
+        type="button"
+        className="row-edit-trigger col-description"
+        onClick={() => onEdit(row)}
+      >
         <span style={{ display: 'flex', gap: '8px', alignItems: 'center', flexWrap: 'wrap' }}>
           {isTransactionType(row.type, "transfer") ? (
             <>
@@ -46,9 +37,13 @@ export default function LaunchRow({row, onEdit}: Readonly<LaunchRowProps>) {
             <span className="occurrence-tag recurring-tag">Recorrente</span>
           )}
         </span>
-      </span>
+      </button>
 
-      <span className="col-account">
+      <button
+        type="button"
+        className="row-edit-trigger col-account"
+        onClick={() => onEdit(row)}
+      >
         {isTransactionType(row.type, "transfer") ? (
             <span
               className="transfer-display"              
@@ -63,9 +58,13 @@ export default function LaunchRow({row, onEdit}: Readonly<LaunchRowProps>) {
             {row.account?.name ?? "Selecionar"}
           </span>
         )}
-      </span>
+      </button>
 
-      <span className="col-category">
+      <button
+        type="button"
+        className="row-edit-trigger col-category"
+        onClick={() => onEdit(row)}
+      >
         {isTransactionType(row.type, "transfer") ? (
           "—"
         ) : (
@@ -75,9 +74,13 @@ export default function LaunchRow({row, onEdit}: Readonly<LaunchRowProps>) {
             {row.category?.name ?? "Selecionar"}
           </span>
         )}
-      </span>
+      </button>
 
-      <span className="col-value">
+      <button
+        type="button"
+        className="row-edit-trigger col-value"
+        onClick={() => onEdit(row)}
+      >
         {(
           <span
             className="value-display"            
@@ -85,7 +88,31 @@ export default function LaunchRow({row, onEdit}: Readonly<LaunchRowProps>) {
             {formatValue(row)}
           </span>
         )}
-      </span>      
+      </button>
+
+      <span className="col-actions">
+        <button
+          type="button"
+          className="row-action-button"
+          title="Editar transação"
+          aria-label="Editar transação"
+          onClick={() => onEdit(row)}
+        >
+          ✏️
+        </button>
+        <button
+          type="button"
+          className="row-action-button delete-transaction-button"
+          title="Excluir transação"
+          aria-label="Excluir transação"
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(row);
+          }}
+        >
+          🗑️
+        </button>
+      </span>
     </div>
   );
 }

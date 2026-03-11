@@ -3,6 +3,7 @@ import "./Login.css";
 import Input from "../../components/ui/Input/Input";
 import Button from "../../components/ui/Button/Button";
 import { useLocation, useNavigate } from "react-router";
+import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/auth/AuthContext";
 import { login as loginApi } from "../../services/authService";
 
@@ -19,8 +20,7 @@ export default function Login() {
   const from =
     (location.state)?.from?.pathname || "/dashboard";
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSubmit() {
     setError(null);
     setLoading(true);
 
@@ -47,7 +47,13 @@ export default function Login() {
   return (
     <div className="login-container">
       <div className="login-card">
-        <form onSubmit={handleSubmit} className="login-form">
+        <form
+          onSubmit={e => {
+            e.preventDefault();
+            void handleSubmit();
+          }}
+          className="login-form"
+        >
           <h2 className="login-title">Login</h2>
           {message && (
             <div className="auth-message">
@@ -82,6 +88,19 @@ export default function Login() {
             type="submit">
             {loading ? "Entrando..." : "Entrar"}
           </Button>
+
+          <p className="login-register-message">
+            Ainda não tem conta?{" "}
+            <Link to="/register" className="login-register-link">
+              Cadastre-se
+            </Link>
+          </p>
+          <p className="login-register-message">
+            Esqueceu a senha?{" "}
+            <Link to="/forgot-password" className="login-register-link">
+              Redefinir senha
+            </Link>
+          </p>
         </form>
       </div>
     </div>

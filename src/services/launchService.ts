@@ -176,8 +176,12 @@ export async function updateLaunch(id: string, payload: Partial<CreateTransactio
   }
 }
 
-export async function deleteLaunch(id: string) {
-  await api.delete(`/transactions/${id}`);
+export type DeleteLaunchScope = "OnlyThis" | "FromFirst" | "FromThis";
+
+export async function deleteLaunch(id: string, scope: DeleteLaunchScope = "OnlyThis") {
+  await api.delete(`/transactions/${id}`, {
+    params: { scope },
+  });
 }
 
 export type GetBalanceResponse = {

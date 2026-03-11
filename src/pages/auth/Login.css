@@ -77,3 +77,20 @@
   font-size: var(--font-label);
   color: var(--primary-600);
 }
+
+.login-register-message {
+  margin: 0;
+  text-align: center;
+  color: var(--gray-700);
+  font-size: 0.95rem;
+}
+
+.login-register-link {
+  color: var(--primary-600);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.login-register-link:hover {
+  text-decoration: underline;
+}

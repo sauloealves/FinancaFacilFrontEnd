@@ -4,6 +4,7 @@ import PrivateRoute from "./PrivateRouter";
 import Login from "../pages/auth/Login";
 import Register from "../pages/auth/Register";
 import ForgotPassword from "../pages/auth/ForgotPassword";
+import ResetPassword from "../pages/auth/ResetPassword";
 import AppLayout from "../components/layout/AppLayout/AppLayout";
 import DashboardPage from "../pages/Dashboard";
 import LaunchesPage from "../pages/LaunchesPage";
@@ -20,7 +21,8 @@ export default function AppRouter() {
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/register" element={<Register />} />
-        <Route path="/forgot-password" element={<ForgotPassword />} />        
+        <Route path="/forgot-password" element={<ForgotPassword />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           element={
             <PrivateRoute>

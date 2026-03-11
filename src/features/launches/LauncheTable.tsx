@@ -7,9 +7,10 @@ import "./LauncheTable.css";
 type LaunchTableProps = {
   data: LaunchTableData;
   onEdit: (row: LaunchRow) => void;
+  onDelete: (row: LaunchRow) => void;
 };
 
-export default function LaunchTable({ data, onEdit }: LaunchTableProps) {
+export default function LaunchTable({ data, onEdit, onDelete }: Readonly<LaunchTableProps>) {
   return (
     <div className="launch-table">
       <div className="launch-table-header">
@@ -31,6 +32,7 @@ export default function LaunchTable({ data, onEdit }: LaunchTableProps) {
             onEdit(row);
             console.log("Editando lançamento", row);
           }}
+          onDelete={onDelete}
         />
       ))}
     </div>

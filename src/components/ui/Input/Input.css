@@ -16,6 +16,12 @@
   border-color: var(--primary-600);
 }
 
+.input-group input:disabled {
+  background-color: var(--gray-100);
+  color: var(--gray-600);
+  cursor: not-allowed;
+}
+
 .input-error {
   font-size: var(--font-label);
   color: var(--danger);

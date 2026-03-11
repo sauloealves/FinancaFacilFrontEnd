@@ -1,56 +1,58 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { register } from "../../services/authService";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { resetPassword } from "../../services/authService";
 import Input from "../../components/ui/Input/Input";
 import Button from "../../components/ui/Button/Button";
-import "./Register.css";
+import "./ResetPassword.css";
 
-export default function Register() {
+export default function ResetPassword() {
   const navigate = useNavigate();
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: ""
-  });
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get("token") ?? "";
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [showSuccess, setShowSuccess] = useState(false);
-  const [countdown, setCountdown] = useState(5);
 
   useEffect(() => {
     if (!showSuccess) return;
-
-    const intervalId = globalThis.setInterval(() => {
-      setCountdown(prev => {
-        if (prev <= 1) {
-          globalThis.clearInterval(intervalId);
-          return 0;
-        }
-
-        return prev - 1;
-      });
-    }, 1000);
 
     const timeoutId = globalThis.setTimeout(() => {
       navigate("/login");
     }, 5000);
 
     return () => {
-      globalThis.clearInterval(intervalId);
       globalThis.clearTimeout(timeoutId);
     };
   }, [navigate, showSuccess]);
 
   async function handleSubmit() {
-    setIsSubmitting(true);
     setErrorMessage("");
 
+    if (!token) {
+      setErrorMessage("Token invalido ou ausente. Solicite um novo link de recuperacao.");
+      return;
+    }
+
+    if (!password || !confirmPassword) {
+      setErrorMessage("Preencha senha e confirmacao de senha.");
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setErrorMessage("As senhas nao conferem.");
+      return;
+    }
+
+    setIsSubmitting(true);
+
     try {
-      await register(form);
+      await resetPassword(token, password);
       setShowSuccess(true);
-      setCountdown(5);
     } catch {
-      setErrorMessage("Não foi possível concluir o cadastro. E-mail já cadastrado. Tente novamente.");
+      setErrorMessage("Nao foi possivel redefinir a senha. Tente novamente.");
     } finally {
       setIsSubmitting(false);
     }
@@ -66,7 +68,7 @@ export default function Register() {
           }}
           className="auth-form"
         >
-          <h2>Criar conta</h2>
+          <h2>Redefinir senha</h2>
 
           {errorMessage && (
             <p className="auth-feedback auth-feedback-error">{errorMessage}</p>
@@ -74,42 +76,33 @@ export default function Register() {
 
           {showSuccess && (
             <p className="auth-feedback auth-feedback-success">
-              Cadastro concluído com sucesso! Você será redirecionado para a página de login em {countdown} segundos.
+              Senha redefinida com sucesso! Voce sera redirecionado para o login em alguns segundos.
             </p>
           )}
 
           <Input
-            label="Nome"
-            value={form.name}
-            onChange={e =>
-              setForm({ ...form, name: e.target.value })
-            }
-            disabled={isSubmitting || showSuccess}
-          />
-
-          <Input
-            label="E-mail"
-            type="email"
-            value={form.email}
-            onChange={e =>
-              setForm({ ...form, email: e.target.value })
-            }
-            disabled={isSubmitting || showSuccess}
-          />
-
-          <Input
-            label="Senha"
+            label="Nova senha"
             type="password"
-            value={form.password}
-            onChange={e =>
-              setForm({ ...form, password: e.target.value })
-            }
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            disabled={isSubmitting || showSuccess}
+          />
+
+          <Input
+            label="Confirmar nova senha"
+            type="password"
+            value={confirmPassword}
+            onChange={e => setConfirmPassword(e.target.value)}
             disabled={isSubmitting || showSuccess}
           />
 
           <Button type="submit" disabled={isSubmitting || showSuccess}>
-            {isSubmitting ? "Cadastrando..." : "Cadastrar"}
+            {isSubmitting ? "Salvando..." : "Redefinir senha"}
           </Button>
+
+          <p className="reset-password-footer">
+            Lembrou a senha? <Link to="/login">Voltar para login</Link>
+          </p>
         </form>
       </div>
     </div>

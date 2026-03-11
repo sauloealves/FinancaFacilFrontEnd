@@ -47,6 +47,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const descriptionInputRef = useRef<HTMLInputElement>(null);
@@ -147,9 +148,10 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
   }
 
   function handleSubmit() {
-    if (!validate()) return;
+    if (!validate() || isSubmitting) return;
 
     setSubmitError("");
+    setIsSubmitting(true);
 
     const expense = {
       type: "expense" as const,
@@ -180,6 +182,9 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
         console.error("Erro ao criar despesa:", err);
         const errorMsg = err?.response?.data?.message || err?.message || "Erro ao criar despesa";
         setSubmitError(errorMsg);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
   }
 
@@ -236,8 +241,8 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
       size="lg"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSubmit}>Salvar</Button>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? "Salvando..." : "Salvar"}</Button>
         </>
       }
     >

@@ -48,6 +48,7 @@ export default function RevenueModal({
     const [type, setType] = useState<LaunchType>("single");
     const [errors, setErrors] = useState<FormErrors>({});
     const [submitError, setSubmitError] = useState<string>("");
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showAccountModal, setShowAccountModal] = useState(false);
     const descriptionInputRef = useRef<HTMLInputElement>(null);
@@ -159,9 +160,12 @@ export default function RevenueModal({
     }
 
     function handleSubmit() {
-        if (!validate()) return;
+      if (!validate() || isSubmitting) {
+        return;
+      }
 
-        setSubmitError("");
+      setSubmitError("");
+      setIsSubmitting(true);
 
         const revenue = {
             type: "income" as const,
@@ -192,6 +196,9 @@ export default function RevenueModal({
                 console.error("Erro ao criar receita:", err);
                 const errorMsg = err?.response?.data?.message || err?.message || "Erro ao criar receita";
                 setSubmitError(errorMsg);
+          })
+          .finally(() => {
+            setIsSubmitting(false);
             });
     }
 
@@ -248,11 +255,11 @@ export default function RevenueModal({
       size="lg"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>
             Cancelar
           </Button>
-          <Button onClick={handleSubmit}>
-            Salvar
+          <Button onClick={handleSubmit} disabled={isSubmitting}>
+            {isSubmitting ? "Salvando..." : "Salvar"}
           </Button>
         </>
       }

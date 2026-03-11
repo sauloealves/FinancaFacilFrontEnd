@@ -24,3 +24,23 @@
   flex-direction: column;
   gap: var(--space-3);
 }
+
+.auth-feedback {
+  border-radius: var(--radius-md);
+  font-size: 0.95rem;
+  line-height: 1.4;
+  margin: 0;
+  padding: var(--space-2) var(--space-3);
+}
+
+.auth-feedback-success {
+  background-color: #e9f9ef;
+  border: 1px solid #b7ebc9;
+  color: #1f7a3d;
+}
+
+.auth-feedback-error {
+  background-color: #fdecec;
+  border: 1px solid #f5c2c2;
+  color: #b42318;
+}

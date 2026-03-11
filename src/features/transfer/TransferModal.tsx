@@ -47,6 +47,7 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string>("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [showAccountModal, setShowAccountModal] = useState(false);
   const [accountTarget, setAccountTarget] = useState<"from" | "to" | null>(null);
   const [showCategoryModal, setShowCategoryModal] = useState(false);
@@ -112,9 +113,10 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
   }
 
   function handleSubmit() {
-    if (!validate()) return;
+    if (!validate() || isSubmitting) return;
 
     setSubmitError("");
+    setIsSubmitting(true);
 
     const transfer = {
       type: "transfer" as const,
@@ -146,6 +148,9 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
         console.error("Erro ao criar transferência:", err);
         const errorMsg = err?.response?.data?.message || err?.message || "Erro ao criar transferência";
         setSubmitError(errorMsg);
+      })
+      .finally(() => {
+        setIsSubmitting(false);
       });
   }
 
@@ -205,8 +210,8 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
       size="lg"
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Cancelar</Button>
-          <Button onClick={handleSubmit}>Salvar</Button>
+          <Button variant="secondary" onClick={onClose} disabled={isSubmitting}>Cancelar</Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting}>{isSubmitting ? "Salvando..." : "Salvar"}</Button>
         </>
       }
     >

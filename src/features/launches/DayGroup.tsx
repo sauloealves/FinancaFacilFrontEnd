@@ -5,9 +5,10 @@ import LaunchRow from "./LaunchRow";
 type DayGroupProps = {
     day: DayGroupType;
     onEdit: (row: LaunchRowType) => void;
+  onDelete: (row: LaunchRowType) => void;
 };
 
-export default function DayGroup({ day, onEdit }: Readonly<DayGroupProps>) {
+export default function DayGroup({ day, onEdit, onDelete }: Readonly<DayGroupProps>) {
   return (  
     <div className="day-group">
       {/* HEADER DO DIA */}
@@ -27,6 +28,7 @@ export default function DayGroup({ day, onEdit }: Readonly<DayGroupProps>) {
               onEdit(row);
               console.log("Editando linha", row);
             }}
+            onDelete={onDelete}
             />
         ))}
       </div>
