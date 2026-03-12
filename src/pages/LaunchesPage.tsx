@@ -8,12 +8,14 @@ import type { LaunchRow } from "../features/launches/types";
 import { useLaunches } from "../contexts/launches/useLaunches";
 import { useAccounts } from "../contexts/accounts/useAccounts";
 import { isTransactionType } from "../utils/sortUtils";
+import ImportTransactionsAction from "../features/import/ImportTransactionsAction";
 import { Button, Modal } from "../components/ui";
 import {
   deleteLaunch,
   getOpeningBalance,
   type DeleteLaunchScope,
 } from "../services/launchService";
+import "./LaunchesPage.css";
 
 /**
  * Página de Lançamentos
@@ -106,6 +108,10 @@ export default function LaunchesPage() {
 
   return (
     <div className="launches-page">
+      <div className="launches-page-header">
+        <ImportTransactionsAction />
+      </div>
+
       {loadingBalance ? (
         <div style={{ padding: "20px", textAlign: "center" }}>Carregando saldo inicial...</div>
       ) : (

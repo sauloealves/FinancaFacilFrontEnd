@@ -34,6 +34,10 @@
   max-width: 720px;
 }
 
+.modal-xl {
+  max-width: 1200px;
+}
+
 /* HEADER */
 .modal-header {
   padding: var(--space-3) var(--space-4);

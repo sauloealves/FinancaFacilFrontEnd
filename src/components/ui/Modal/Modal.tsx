@@ -7,7 +7,7 @@ type ModalProps = {
   children: React.ReactNode;
   footer?: React.ReactNode;
   onClose: () => void;
-  size?: "sm" | "md" | "lg";
+  size?: "sm" | "md" | "lg" | "xl";
 };
 
 export default function Modal({

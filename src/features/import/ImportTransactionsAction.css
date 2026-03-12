@@ -1,0 +1,229 @@
+.import-transactions-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.import-transactions-intro p {
+  margin: 0;
+  color: var(--gray-700);
+  line-height: 1.6;
+}
+
+.import-transactions-summary {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.import-transactions-summary p {
+  margin: 0;
+  color: var(--gray-700);
+  line-height: 1.5;
+}
+
+.import-transactions-summary strong {
+  color: var(--gray-900);
+}
+
+.import-transactions-template-link {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--primary-600);
+  cursor: pointer;
+  font-size: var(--font-body);
+  font-weight: 500;
+  text-decoration: underline;
+}
+
+.import-transactions-template-link:hover {
+  color: var(--primary-700);
+}
+
+.import-transactions-message {
+  margin-bottom: 16px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-body);
+  line-height: 1.4;
+}
+
+.import-transactions-message.error {
+  background: #fef3f2;
+  border: 1px solid #fecdca;
+  color: #b42318;
+}
+
+.import-transactions-message.success {
+  background: #ecfdf3;
+  border: 1px solid #abefc6;
+  color: #067647;
+}
+
+.import-transactions-grid-wrapper {
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.import-transactions-grid {
+  min-width: 1600px;
+}
+
+.import-transactions-grid-row {
+  display: grid;
+  grid-template-columns: 64px 100px 150px minmax(220px, 1.4fr) 140px 240px 240px 240px minmax(260px, 1fr);
+  gap: 12px;
+  align-items: start;
+  padding: 12px;
+  border-bottom: 1px solid var(--gray-200);
+}
+
+.import-transactions-grid-row.header {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--gray-100);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-md) var(--radius-md) 0 0;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-700);
+}
+
+.import-transactions-grid-row.data {
+  background: var(--white);
+}
+
+.import-transactions-grid-row.data:nth-child(even) {
+  background: #fafafa;
+}
+
+.import-transactions-grid-row.has-errors {
+  background: #fff7ed;
+}
+
+.import-transactions-grid-row.has-server-error {
+  background: #fef3f2;
+}
+
+.import-transactions-grid-cell {
+  min-width: 0;
+}
+
+.import-transactions-select-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.import-transactions-select-row .searchable-select-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.import-transactions-create-btn {
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.import-transactions-grid-cell label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--gray-700);
+}
+
+.import-transactions-checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+}
+
+.import-transactions-type {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 40px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 0 12px;
+}
+
+.import-transactions-type.income {
+  background: #ecfdf3;
+  color: #067647;
+}
+
+.import-transactions-type.expense {
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.import-transactions-type.transfer {
+  background: #eff8ff;
+  color: #175cd3;
+}
+
+.import-transactions-input,
+.import-transactions-readonly {
+  width: 100%;
+  min-height: 40px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--gray-300);
+  padding: 10px 12px;
+  font-size: var(--font-body);
+  color: var(--gray-900);
+  background: var(--white);
+  box-sizing: border-box;
+}
+
+.import-transactions-input:focus {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(23, 92, 211, 0.12);
+}
+
+.import-transactions-readonly {
+  display: flex;
+  align-items: center;
+  color: var(--gray-700);
+  background: var(--gray-100);
+}
+
+.import-transactions-notes {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.import-transactions-note {
+  font-size: 12px;
+  line-height: 1.4;
+  color: #92400e;
+}
+
+.import-transactions-note.server-error {
+  color: #b42318;
+}
+
+.import-transactions-empty-state {
+  padding: 32px 16px;
+  text-align: center;
+  color: var(--gray-600);
+}
+
+@media (max-width: 1200px) {
+  .import-transactions-summary {
+    align-items: stretch;
+  }
+}

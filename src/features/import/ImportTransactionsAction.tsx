@@ -1,0 +1,1095 @@
+import { useRef, useState } from "react";
+import * as XLSX from "xlsx";
+import { Button, Modal } from "../../components/ui";
+import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
+import { useAccounts } from "../../contexts/accounts/useAccounts";
+import { useCategories } from "../../contexts/categories/useCategories";
+import { useLaunches } from "../../contexts/launches/useLaunches";
+import type { Account } from "../accounts/types";
+import type { Category } from "../categories/types";
+import { createAccount, getAccounts } from "../../services/accountService";
+import { createCategory, getCategories } from "../../services/categoryService";
+import {
+  createTransaction,
+  type CreateTransactionPayload,
+} from "../../services/launchService";
+import {
+  formatBRLInput,
+  formatBRLInputSigned,
+} from "../../utils/currency";
+import {
+  sortAccountsAlphabetically,
+  sortCategoriesHierarchically,
+} from "../../utils/sortUtils";
+import "./ImportTransactionsAction.css";
+
+const REQUIRED_COLUMNS = [
+  "Data Ocorrência",
+  "Descrição",
+  "Valor",
+  "Categoria",
+  "Conta",
+] as const;
+
+const EXCEL_ACCEPT = ".xlsx,.xls,.xlsm,.xlsb";
+
+type RequiredColumn = (typeof REQUIRED_COLUMNS)[number];
+type ExcelRow = Record<string, unknown>;
+type TransactionKind = "income" | "expense" | "transfer";
+type ImportRowBase = {
+  id: string;
+  selected: boolean;
+  description: string;
+  date: string;
+  amountInput: string;
+  notes: string[];
+  sourceLabel: string;
+  serverError?: string;
+};
+
+type RegularImportRow = ImportRowBase & {
+  rowType: "regular";
+  categoryId: string;
+  accountId: string;
+  originalCategoryName: string;
+  originalAccountName: string;
+};
+
+type TransferImportRow = ImportRowBase & {
+  rowType: "transfer";
+  fromAccountId: string;
+  toAccountId: string;
+  originalFromAccountName: string;
+  originalToAccountName: string;
+};
+
+type ImportRow = RegularImportRow | TransferImportRow;
+
+type ParsedExcelRow = {
+  sourceLine: number;
+  date: string;
+  description: string;
+  value: number;
+  categoryName: string;
+  accountName: string;
+  isTransfer: boolean;
+};
+
+function normalizeLookupValue(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function isExcelFile(file: File): boolean {
+  const fileName = file.name.toLowerCase();
+  return [".xlsx", ".xls", ".xlsm", ".xlsb"].some((extension) =>
+    fileName.endsWith(extension)
+  );
+}
+
+function parseLocalizedNumber(value: unknown): number {
+  if (typeof value === "number") {
+    return Number.isFinite(value) ? value : 0;
+  }
+
+  if (value instanceof Date) {
+    return value.getTime();
+  }
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return 0;
+
+  const cleaned = raw
+    .replace(/R\$/gi, "")
+    .replace(/\s+/g, "")
+    .replace(/\.(?=\d{3}(\D|$))/g, "")
+    .replace(/,/g, ".");
+
+  const numeric = Number(cleaned);
+  return Number.isFinite(numeric) ? numeric : 0;
+}
+
+function normalizeDate(value: unknown): string {
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value.toISOString().slice(0, 10);
+  }
+
+  if (typeof value === "number") {
+    const parsedDate = XLSX.SSF.parse_date_code(value);
+    if (parsedDate) {
+      const year = String(parsedDate.y).padStart(4, "0");
+      const month = String(parsedDate.m).padStart(2, "0");
+      const day = String(parsedDate.d).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    }
+  }
+
+  const raw = String(value ?? "").trim();
+  if (!raw) return "";
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    return raw;
+  }
+
+  const brMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  if (brMatch) {
+    const [, day, month, year] = brMatch;
+    return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
+  }
+
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) {
+    return parsed.toISOString().slice(0, 10);
+  }
+
+  return "";
+}
+
+function resolveHeaders(sample: ExcelRow): Record<RequiredColumn, string> {
+  const headers = Object.keys(sample);
+  const lookup = new Map(headers.map((header) => [normalizeLookupValue(header), header]));
+
+  const resolved = {} as Record<RequiredColumn, string>;
+  for (const column of REQUIRED_COLUMNS) {
+    const found = lookup.get(normalizeLookupValue(column));
+    if (!found) {
+      throw new Error(`A coluna obrigatória \"${column}\" não foi encontrada no arquivo.`);
+    }
+    resolved[column] = found;
+  }
+
+  return resolved;
+}
+
+function createRowId(): string {
+  if (typeof crypto !== "undefined" && "randomUUID" in crypto) {
+    return crypto.randomUUID();
+  }
+
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function findMatchingAccountId(name: string, accounts: Account[]): string {
+  const normalizedName = normalizeLookupValue(name);
+  if (!normalizedName) return "";
+
+  return accounts.find((account) => normalizeLookupValue(account.name) === normalizedName)?.id ?? "";
+}
+
+function findMatchingCategoryId(name: string, categories: Category[]): string {
+  const normalizedName = normalizeLookupValue(name);
+  if (!normalizedName) return "";
+
+  return categories.find((category) => normalizeLookupValue(category.name) === normalizedName)?.id ?? "";
+}
+
+function getRegularKind(amountInput: string): Exclude<TransactionKind, "transfer"> {
+  return parseLocalizedNumber(amountInput) < 0 ? "expense" : "income";
+}
+
+function getBlockingErrors(row: ImportRow): string[] {
+  const errors: string[] = [];
+  const amount = parseLocalizedNumber(row.amountInput);
+
+  if (!row.date) errors.push("Informe uma data válida.");
+  if (!row.description.trim()) errors.push("Descrição é obrigatória.");
+
+  if (row.rowType === "transfer") {
+    if (Math.abs(amount) <= 0) errors.push("Valor da transferência deve ser maior que zero.");
+    if (!row.fromAccountId) errors.push("Selecione a conta de origem.");
+    if (!row.toAccountId) errors.push("Selecione a conta de destino.");
+    if (row.fromAccountId && row.toAccountId && row.fromAccountId === row.toAccountId) {
+      errors.push("Origem e destino devem ser contas diferentes.");
+    }
+    return errors;
+  }
+
+  if (amount === 0) errors.push("Valor não pode ser zero.");
+  if (!row.categoryId) errors.push("Selecione a categoria equivalente.");
+  if (!row.accountId) errors.push("Selecione a conta equivalente.");
+
+  return errors;
+}
+
+function buildPayload(row: ImportRow): CreateTransactionPayload {
+  if (row.rowType === "transfer") {
+    return {
+      type: "transfer",
+      description: row.description.trim(),
+      value: Math.abs(parseLocalizedNumber(row.amountInput)),
+      fromAccountId: row.fromAccountId,
+      toAccountId: row.toAccountId,
+      startDate: row.date,
+      occurrenceType: "single",
+    };
+  }
+
+  const amount = parseLocalizedNumber(row.amountInput);
+  const type = getRegularKind(row.amountInput);
+
+  return {
+    type,
+    description: row.description.trim(),
+    value: Math.abs(amount),
+    categoryId: row.categoryId,
+    accountId: row.accountId,
+    startDate: row.date,
+    occurrenceType: "single",
+  };
+}
+
+export function downloadTransactionsImportTemplate() {
+  const workbook = XLSX.utils.book_new();
+  const worksheet = XLSX.utils.json_to_sheet([
+    {
+      "Data Ocorrência": "12/03/2026",
+      "Descrição": "Salário",
+      Valor: "3500,00",
+      Categoria: "Salário",
+      Conta: "Conta Corrente",
+    },
+    {
+      "Data Ocorrência": "13/03/2026",
+      "Descrição": "Supermercado",
+      Valor: "-250,30",
+      Categoria: "Alimentação",
+      Conta: "Cartão",
+    },
+    {
+      "Data Ocorrência": "14/03/2026",
+      "Descrição": "Reserva mensal",
+      Valor: "-500,00",
+      Categoria: "Transferência",
+      Conta: "Conta Corrente",
+    },
+    {
+      "Data Ocorrência": "14/03/2026",
+      "Descrição": "Reserva mensal",
+      Valor: "500,00",
+      Categoria: "Transferência",
+      Conta: "Poupança",
+    },
+  ]);
+
+  XLSX.utils.book_append_sheet(workbook, worksheet, "Importacao");
+  XLSX.writeFile(workbook, "modelo-importacao-lancamentos.xlsx");
+}
+
+export default function ImportTransactionsAction() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { accounts, reloadAccounts } = useAccounts();
+  const { categories, reloadCategories } = useCategories();
+  const { reloadLaunches } = useLaunches();
+  const [isChooserOpen, setIsChooserOpen] = useState(false);
+  const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [rows, setRows] = useState<ImportRow[]>([]);
+  const [fileName, setFileName] = useState("");
+  const [isImporting, setIsImporting] = useState(false);
+  const [creatingKeys, setCreatingKeys] = useState<string[]>([]);
+  const [accountOptions, setAccountOptions] = useState<Account[] | null>(null);
+  const [categoryOptions, setCategoryOptions] = useState<Category[] | null>(null);
+  const [submitError, setSubmitError] = useState("");
+  const [submitSuccess, setSubmitSuccess] = useState("");
+
+  const activeAccounts = accountOptions ?? accounts;
+  const activeCategories = categoryOptions ?? categories;
+  const sortedAccounts = sortAccountsAlphabetically(activeAccounts);
+  const sortedCategories = sortCategoriesHierarchically(activeCategories);
+  const selectedCount = rows.filter((row) => row.selected).length;
+  const allSelected = rows.length > 0 && rows.every((row) => row.selected);
+  const pendingCount = rows.filter((row) => getBlockingErrors(row).length > 0).length;
+
+  function resetState() {
+    setIsChooserOpen(false);
+    setIsPreviewOpen(false);
+    setRows([]);
+    setFileName("");
+    setAccountOptions(null);
+    setCategoryOptions(null);
+    setSubmitError("");
+    setSubmitSuccess("");
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function openChooser() {
+    if (isImporting) return;
+    setSubmitError("");
+    setSubmitSuccess("");
+    setIsChooserOpen(true);
+  }
+
+  function openFilePicker() {
+    if (isImporting) return;
+    setSubmitError("");
+    setSubmitSuccess("");
+    fileInputRef.current?.click();
+  }
+
+  function updateRow(id: string, updater: (row: ImportRow) => ImportRow) {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        row.id === id
+          ? {
+              ...updater(row),
+              serverError: undefined,
+            }
+          : row
+      )
+    );
+    setSubmitError("");
+    setSubmitSuccess("");
+  }
+
+  function updateRowsMatching(
+    matcher: (row: ImportRow) => boolean,
+    updater: (row: ImportRow) => ImportRow
+  ) {
+    setRows((currentRows) =>
+      currentRows.map((row) =>
+        matcher(row)
+          ? {
+              ...updater(row),
+              serverError: undefined,
+            }
+          : row
+      )
+    );
+    setSubmitError("");
+    setSubmitSuccess("");
+  }
+
+  function updateRegularCategoryMapping(
+    originalName: string,
+    categoryId: string,
+    sourceRowId?: string
+  ) {
+    const normalizedName = normalizeLookupValue(originalName);
+    if (!normalizedName && !sourceRowId) return;
+
+    updateRowsMatching(
+      (row) =>
+        row.rowType === "regular" &&
+        (row.id === sourceRowId ||
+          (!!normalizedName &&
+            normalizeLookupValue(row.originalCategoryName) === normalizedName)),
+      (row) =>
+        row.rowType === "regular"
+          ? {
+              ...row,
+              categoryId,
+            }
+          : row
+    );
+  }
+
+  function updateRegularCategoryForRow(rowId: string, categoryId: string) {
+    updateRow(rowId, (currentRow) =>
+      currentRow.rowType === "regular"
+        ? {
+            ...currentRow,
+            categoryId,
+          }
+        : currentRow
+    );
+  }
+
+  function updateAccountMapping(
+    originalName: string,
+    accountId: string
+  ) {
+    const normalizedName = normalizeLookupValue(originalName);
+    if (!normalizedName) return;
+
+    updateRowsMatching(
+      (row) =>
+        (row.rowType === "regular" &&
+          normalizeLookupValue(row.originalAccountName) === normalizedName) ||
+        (row.rowType === "transfer" &&
+          (normalizeLookupValue(row.originalFromAccountName) === normalizedName ||
+            normalizeLookupValue(row.originalToAccountName) === normalizedName)),
+      (row) => {
+        if (row.rowType === "regular") {
+          return {
+              ...row,
+              accountId,
+            };
+        }
+
+        const shouldUpdateFrom = normalizeLookupValue(row.originalFromAccountName) === normalizedName;
+        const shouldUpdateTo = normalizeLookupValue(row.originalToAccountName) === normalizedName;
+
+        return {
+          ...row,
+          fromAccountId: shouldUpdateFrom ? accountId : row.fromAccountId,
+          toAccountId: shouldUpdateTo ? accountId : row.toAccountId,
+        };
+      }
+    );
+  }
+
+  function updateAccountForRow(
+    rowId: string,
+    accountId: string,
+    target: "regular" | "from" | "to"
+  ) {
+    updateRow(rowId, (currentRow) => {
+      if (currentRow.rowType === "regular") {
+        return target === "regular"
+          ? {
+              ...currentRow,
+              accountId,
+            }
+          : currentRow;
+      }
+
+      if (target === "from") {
+        return {
+          ...currentRow,
+          fromAccountId: accountId,
+        };
+      }
+
+      if (target === "to") {
+        return {
+          ...currentRow,
+          toAccountId: accountId,
+        };
+      }
+
+      return currentRow;
+    });
+  }
+
+  function withCreatingKey<T>(key: string, action: () => Promise<T>) {
+    setCreatingKeys((currentKeys) => [...currentKeys, key]);
+    return action().finally(() => {
+      setCreatingKeys((currentKeys) => currentKeys.filter((currentKey) => currentKey !== key));
+    });
+  }
+
+  function isCreating(key: string) {
+    return creatingKeys.includes(key);
+  }
+
+  async function handleCreateCategoryForName(originalName: string, sourceRowId: string) {
+    const trimmedName = originalName.trim();
+    if (!trimmedName) return;
+
+    const createKey = `category:${normalizeLookupValue(trimmedName)}`;
+    if (isCreating(createKey)) return;
+
+    try {
+      await withCreatingKey(createKey, () => createCategory({ name: trimmedName }));
+      const freshCategories = await getCategories();
+      setCategoryOptions(freshCategories);
+      void reloadCategories();
+
+      const resolvedCategoryId = findMatchingCategoryId(trimmedName, freshCategories);
+      if (!resolvedCategoryId) {
+        throw new Error("A categoria foi criada, mas não foi possível localizá-la para seleção automática.");
+      }
+
+      updateRegularCategoryMapping(trimmedName, resolvedCategoryId, sourceRowId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível criar a categoria.";
+      setSubmitError(message);
+      setSubmitSuccess("");
+    }
+  }
+
+  async function handleCreateAccountForName(
+    originalName: string
+  ) {
+    const trimmedName = originalName.trim();
+    if (!trimmedName) return;
+
+    const createKey = `account:${normalizeLookupValue(trimmedName)}`;
+    if (isCreating(createKey)) return;
+
+    try {
+      await withCreatingKey(createKey, () =>
+        createAccount({ name: trimmedName, initialBalance: 0 })
+      );
+      const freshAccounts = await getAccounts();
+      setAccountOptions(freshAccounts);
+      void reloadAccounts();
+
+      const resolvedAccountId = findMatchingAccountId(trimmedName, freshAccounts);
+      if (!resolvedAccountId) {
+        throw new Error("A conta foi criada, mas não foi possível localizá-la para seleção automática.");
+      }
+
+      updateAccountMapping(trimmedName, resolvedAccountId);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível criar a conta.";
+      setSubmitError(message);
+      setSubmitSuccess("");
+    }
+  }
+
+  async function parseFile(file: File) {
+    if (!isExcelFile(file)) {
+      throw new Error("Selecione um arquivo Excel válido (.xlsx, .xls, .xlsm ou .xlsb).");
+    }
+
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      throw new Error("O arquivo não possui planilhas para importar.");
+    }
+
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonRows = XLSX.utils.sheet_to_json<ExcelRow>(worksheet, {
+      defval: "",
+      raw: true,
+    });
+
+    if (jsonRows.length === 0) {
+      throw new Error("O arquivo Excel está vazio.");
+    }
+
+    const headers = resolveHeaders(jsonRows[0]);
+    const parsedRows: ParsedExcelRow[] = jsonRows.map((jsonRow, index) => {
+      const categoryName = String(jsonRow[headers["Categoria"]] ?? "").trim();
+      return {
+        sourceLine: index + 2,
+        date: normalizeDate(jsonRow[headers["Data Ocorrência"]]),
+        description: String(jsonRow[headers["Descrição"]] ?? "").trim(),
+        value: parseLocalizedNumber(jsonRow[headers["Valor"]]),
+        categoryName,
+        accountName: String(jsonRow[headers["Conta"]] ?? "").trim(),
+        isTransfer: normalizeLookupValue(categoryName) === "transferencia",
+      };
+    });
+
+    const importedRows: ImportRow[] = [];
+
+    for (let index = 0; index < parsedRows.length; index += 1) {
+      const currentRow = parsedRows[index];
+      if (currentRow.isTransfer) {
+        const nextRow = parsedRows[index + 1];
+        const notes: string[] = [];
+        let shouldConsumeNextRow = false;
+
+        if (!nextRow || !nextRow.isTransfer) {
+          notes.push("Transferência deve possuir a linha seguinte para destino.");
+        } else {
+          shouldConsumeNextRow = true;
+          if (currentRow.date && nextRow.date && currentRow.date !== nextRow.date) {
+            notes.push("As duas linhas da transferência vieram com datas diferentes. Ajuste antes de importar.");
+          }
+          if (
+            currentRow.value !== 0 &&
+            nextRow.value !== 0 &&
+            Math.abs(currentRow.value) !== Math.abs(nextRow.value)
+          ) {
+            notes.push("Os valores de origem e destino da transferência estão diferentes.");
+          }
+        }
+
+        importedRows.push({
+          id: createRowId(),
+          rowType: "transfer",
+          selected: true,
+          description: currentRow.description || nextRow?.description || "Transferência",
+          date: currentRow.date || nextRow?.date || "",
+          amountInput: formatBRLInput(Math.abs(currentRow.value || nextRow?.value || 0)),
+          fromAccountId: findMatchingAccountId(currentRow.accountName, sortedAccounts),
+          toAccountId: findMatchingAccountId(nextRow?.accountName ?? "", sortedAccounts),
+          originalFromAccountName: currentRow.accountName,
+          originalToAccountName: nextRow?.accountName ?? "",
+          notes,
+          sourceLabel: shouldConsumeNextRow
+            ? `Linhas ${currentRow.sourceLine} e ${nextRow.sourceLine}`
+            : `Linha ${currentRow.sourceLine}`,
+        });
+
+        if (shouldConsumeNextRow) {
+          index += 1;
+        }
+
+        continue;
+      }
+
+      importedRows.push({
+        id: createRowId(),
+        rowType: "regular",
+        selected: true,
+        description: currentRow.description,
+        date: currentRow.date,
+        amountInput: formatBRLInputSigned(currentRow.value),
+        categoryId: findMatchingCategoryId(currentRow.categoryName, sortedCategories),
+        accountId: findMatchingAccountId(currentRow.accountName, sortedAccounts),
+        originalCategoryName: currentRow.categoryName,
+        originalAccountName: currentRow.accountName,
+        notes: [],
+        sourceLabel: `Linha ${currentRow.sourceLine}`,
+      });
+    }
+
+    if (importedRows.length === 0) {
+      throw new Error("Nenhum lançamento válido foi encontrado no arquivo.");
+    }
+
+    setRows(importedRows);
+    setFileName(file.name);
+    setSubmitError("");
+    setSubmitSuccess("");
+    setIsChooserOpen(false);
+    setIsPreviewOpen(true);
+  }
+
+  async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      await parseFile(file);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Não foi possível ler o arquivo Excel.";
+      window.alert(message);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  }
+
+  async function handleImportSelected() {
+    const selectedRowsToImport = rows.filter((row) => row.selected);
+    if (selectedRowsToImport.length === 0) {
+      setSubmitError("Selecione ao menos um registro para importar.");
+      setSubmitSuccess("");
+      return;
+    }
+
+    const invalidRows = selectedRowsToImport.filter((row) => getBlockingErrors(row).length > 0);
+    if (invalidRows.length > 0) {
+      setSubmitError(
+        `${invalidRows.length} registro(s) selecionado(s) ainda possuem pendências. Ajuste os campos destacados antes de importar.`
+      );
+      setSubmitSuccess("");
+      return;
+    }
+
+    setIsImporting(true);
+    setSubmitError("");
+    setSubmitSuccess("");
+
+    const failedById = new Map<string, string>();
+    const successIds = new Set<string>();
+
+    for (const row of selectedRowsToImport) {
+      try {
+        await createTransaction(buildPayload(row));
+        successIds.add(row.id);
+      } catch (error) {
+        const errorMessage =
+          error instanceof Error
+            ? error.message
+            : "Falha ao enviar o registro para o servidor.";
+        failedById.set(row.id, errorMessage);
+      }
+    }
+
+    try {
+      if (successIds.size > 0) {
+        await reloadLaunches();
+        await reloadAccounts();
+      }
+    } finally {
+      setIsImporting(false);
+    }
+
+    if (failedById.size === 0) {
+      resetState();
+      return;
+    }
+
+    setRows((currentRows) =>
+      currentRows
+        .filter((row) => !successIds.has(row.id))
+        .map((row) => ({
+          ...row,
+          serverError: failedById.get(row.id),
+        }))
+    );
+
+    if (successIds.size > 0) {
+      setSubmitSuccess(`${successIds.size} registro(s) importado(s) com sucesso.`);
+    }
+
+    setSubmitError(
+      `${failedById.size} registro(s) falharam e permaneceram na grade para correção e nova tentativa.`
+    );
+  }
+
+  return (
+    <>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept={EXCEL_ACCEPT}
+        style={{ display: "none" }}
+        onChange={handleFileChange}
+      />
+
+      <Button variant="secondary" onClick={openChooser}>
+        Importar Excel
+      </Button>
+
+      <Modal
+        isOpen={isChooserOpen}
+        title="Importar lançamentos"
+        onClose={resetState}
+        size="md"
+        footer={
+          <>
+            <Button variant="secondary" onClick={resetState} disabled={isImporting}>
+              Cancelar
+            </Button>
+            <Button onClick={openFilePicker} disabled={isImporting}>
+              Buscar arquivo
+            </Button>
+          </>
+        }
+      >
+        <div className="import-transactions-intro">
+          <p>
+            Selecione um arquivo Excel com as colunas <strong>Data Ocorrência</strong>, <strong>Descrição</strong>, <strong>Valor</strong>, <strong>Categoria</strong> e <strong>Conta</strong>.
+          </p>
+          <p>
+            Depois da leitura, o sistema abrirá uma pré-visualização para revisar, mapear contas e categorias e escolher quais registros serão importados.
+          </p>
+          <button
+            type="button"
+            className="import-transactions-template-link"
+            onClick={downloadTransactionsImportTemplate}
+          >
+            Baixar modelo
+          </button>
+        </div>
+      </Modal>
+
+      <Modal
+        isOpen={isPreviewOpen}
+        title={fileName ? `Importar lançamentos: ${fileName}` : "Importar lançamentos"}
+        onClose={resetState}
+        size="xl"
+        footer={
+          <>
+            <Button variant="secondary" onClick={resetState} disabled={isImporting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleImportSelected} disabled={isImporting || rows.length === 0}>
+              {isImporting ? "Importando..." : `Importar selecionados (${selectedCount})`}
+            </Button>
+          </>
+        }
+      >
+        <div className="import-transactions-summary">
+          <p>
+            <strong>{rows.length}</strong> registro(s) lido(s) do arquivo. Marque o que deseja importar, ajuste os campos quando necessário e confirme.
+            <br />
+            Transferências são agrupadas em pares consecutivos quando a categoria vier como <strong>Transferência</strong>.
+          </p>
+          <button
+            type="button"
+            className="import-transactions-template-link"
+            onClick={downloadTransactionsImportTemplate}
+          >
+            Baixar modelo
+          </button>
+        </div>
+
+        {submitError && <div className="import-transactions-message error">{submitError}</div>}
+        {submitSuccess && <div className="import-transactions-message success">{submitSuccess}</div>}
+
+        {rows.length === 0 ? (
+          <div className="import-transactions-empty-state">
+            Nenhum registro disponível para importação.
+          </div>
+        ) : (
+          <div className="import-transactions-grid-wrapper">
+            <div className="import-transactions-grid">
+              <div className="import-transactions-grid-row header">
+                <div className="import-transactions-grid-cell import-transactions-checkbox">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={allSelected}
+                      onChange={(event) =>
+                        setRows((currentRows) =>
+                          currentRows.map((row) => ({ ...row, selected: event.target.checked }))
+                        )
+                      }
+                    />
+                    Todos
+                  </label>
+                </div>
+                <div className="import-transactions-grid-cell">Tipo</div>
+                <div className="import-transactions-grid-cell">Data</div>
+                <div className="import-transactions-grid-cell">Descrição</div>
+                <div className="import-transactions-grid-cell">Valor</div>
+                <div className="import-transactions-grid-cell">Categoria</div>
+                <div className="import-transactions-grid-cell">Conta / Origem</div>
+                <div className="import-transactions-grid-cell">Conta destino</div>
+                <div className="import-transactions-grid-cell">Observações</div>
+              </div>
+
+              {rows.map((row) => {
+                const rowErrors = getBlockingErrors(row);
+                const rowKind: TransactionKind =
+                  row.rowType === "transfer" ? "transfer" : getRegularKind(row.amountInput);
+
+                return (
+                  <div
+                    key={row.id}
+                    className={[
+                      "import-transactions-grid-row",
+                      "data",
+                      rowErrors.length > 0 ? "has-errors" : "",
+                      row.serverError ? "has-server-error" : "",
+                    ]
+                      .filter(Boolean)
+                      .join(" ")}
+                  >
+                    <div className="import-transactions-grid-cell import-transactions-checkbox">
+                      <input
+                        type="checkbox"
+                        checked={row.selected}
+                        onChange={(event) =>
+                          updateRow(row.id, (currentRow) => ({
+                            ...currentRow,
+                            selected: event.target.checked,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="import-transactions-grid-cell">
+                      <span className={`import-transactions-type ${rowKind}`}>
+                        {rowKind === "income" && "Receita"}
+                        {rowKind === "expense" && "Despesa"}
+                        {rowKind === "transfer" && "Transferência"}
+                      </span>
+                    </div>
+
+                    <div className="import-transactions-grid-cell">
+                      <input
+                        className="import-transactions-input"
+                        type="date"
+                        value={row.date}
+                        onChange={(event) =>
+                          updateRow(row.id, (currentRow) => ({
+                            ...currentRow,
+                            date: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="import-transactions-grid-cell">
+                      <input
+                        className="import-transactions-input"
+                        type="text"
+                        value={row.description}
+                        onChange={(event) =>
+                          updateRow(row.id, (currentRow) => ({
+                            ...currentRow,
+                            description: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="import-transactions-grid-cell">
+                      <input
+                        className="import-transactions-input"
+                        type="text"
+                        value={row.amountInput}
+                        onChange={(event) =>
+                          updateRow(row.id, (currentRow) => ({
+                            ...currentRow,
+                            amountInput: event.target.value,
+                          }))
+                        }
+                      />
+                    </div>
+
+                    <div className="import-transactions-grid-cell">
+                      {row.rowType === "transfer" ? (
+                        <div className="import-transactions-readonly">Transferência</div>
+                      ) : (
+                        <div className="import-transactions-select-row">
+                          <SearchableSelect
+                            label={undefined}
+                            items={sortedCategories}
+                            selectedValue={row.categoryId}
+                            onSelect={(value) =>
+                              row.categoryId
+                                ? updateRegularCategoryForRow(row.id, value)
+                                : updateRegularCategoryMapping(row.originalCategoryName, value, row.id)
+                            }
+                            getLabel={(category) => category.name}
+                            getId={(category) => category.id}
+                            placeholder={
+                              row.originalCategoryName
+                                ? `Mapear: ${row.originalCategoryName}`
+                                : "Buscar categoria..."
+                            }
+                          />
+                          {!row.categoryId && row.originalCategoryName.trim() && (
+                            <button
+                              type="button"
+                              className="btn-small import-transactions-create-btn"
+                              onClick={() => void handleCreateCategoryForName(row.originalCategoryName, row.id)}
+                              disabled={isCreating(`category:${normalizeLookupValue(row.originalCategoryName)}`)}
+                              title={`Criar categoria ${row.originalCategoryName}`}
+                            >
+                              +
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="import-transactions-grid-cell">
+                      <div className="import-transactions-select-row">
+                        <SearchableSelect
+                          label={undefined}
+                          items={sortedAccounts}
+                          selectedValue={row.rowType === "transfer" ? row.fromAccountId : row.accountId}
+                          onSelect={(value) => {
+                            if (row.rowType === "transfer") {
+                              if (row.fromAccountId) {
+                                updateAccountForRow(row.id, value, "from");
+                                return;
+                              }
+
+                              updateAccountMapping(row.originalFromAccountName, value);
+                              return;
+                            }
+
+                            if (row.accountId) {
+                              updateAccountForRow(row.id, value, "regular");
+                              return;
+                            }
+
+                            updateAccountMapping(row.originalAccountName, value);
+                          }}
+                          getLabel={(account) => account.name}
+                          getId={(account) => account.id}
+                          placeholder={
+                            row.rowType === "transfer"
+                              ? row.originalFromAccountName
+                                ? `Origem: ${row.originalFromAccountName}`
+                                : "Buscar conta origem..."
+                              : row.originalAccountName
+                                ? `Mapear: ${row.originalAccountName}`
+                                : "Buscar conta..."
+                          }
+                        />
+                        {row.rowType === "transfer" && !row.fromAccountId && row.originalFromAccountName.trim() && (
+                          <button
+                            type="button"
+                            className="btn-small import-transactions-create-btn"
+                            onClick={() => void handleCreateAccountForName(row.originalFromAccountName)}
+                            disabled={isCreating(`account:${normalizeLookupValue(row.originalFromAccountName)}`)}
+                            title={`Criar conta ${row.originalFromAccountName}`}
+                          >
+                            +
+                          </button>
+                        )}
+                        {row.rowType === "regular" && !row.accountId && row.originalAccountName.trim() && (
+                          <button
+                            type="button"
+                            className="btn-small import-transactions-create-btn"
+                            onClick={() => void handleCreateAccountForName(row.originalAccountName)}
+                            disabled={isCreating(`account:${normalizeLookupValue(row.originalAccountName)}`)}
+                            title={`Criar conta ${row.originalAccountName}`}
+                          >
+                            +
+                          </button>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="import-transactions-grid-cell">
+                      {row.rowType === "transfer" ? (
+                        <div className="import-transactions-select-row">
+                          <SearchableSelect
+                            label={undefined}
+                            items={sortedAccounts}
+                            selectedValue={row.toAccountId}
+                            onSelect={(value) =>
+                              row.toAccountId
+                                ? updateAccountForRow(row.id, value, "to")
+                                : updateAccountMapping(row.originalToAccountName, value)
+                            }
+                            getLabel={(account) => account.name}
+                            getId={(account) => account.id}
+                            placeholder={
+                              row.originalToAccountName
+                                ? `Destino: ${row.originalToAccountName}`
+                                : "Buscar conta destino..."
+                            }
+                          />
+                          {!row.toAccountId && row.originalToAccountName.trim() && (
+                            <button
+                              type="button"
+                              className="btn-small import-transactions-create-btn"
+                              onClick={() => void handleCreateAccountForName(row.originalToAccountName)}
+                              disabled={isCreating(`account:${normalizeLookupValue(row.originalToAccountName)}`)}
+                              title={`Criar conta ${row.originalToAccountName}`}
+                            >
+                              +
+                            </button>
+                          )}
+                        </div>
+                      ) : (
+                        <div className="import-transactions-readonly">Não se aplica</div>
+                      )}
+                    </div>
+
+                    <div className="import-transactions-grid-cell">
+                      <div className="import-transactions-notes">
+                        <span className="import-transactions-note">{row.sourceLabel}</span>
+                        {row.notes.map((note) => (
+                          <span key={note} className="import-transactions-note">
+                            {note}
+                          </span>
+                        ))}
+                        {rowErrors.map((error) => (
+                          <span key={error} className="import-transactions-note">
+                            {error}
+                          </span>
+                        ))}
+                        {row.serverError && (
+                          <span className="import-transactions-note server-error">
+                            {row.serverError}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
+        <div style={{ marginTop: 16, color: "var(--gray-600)" }}>
+          {selectedCount} registro(s) selecionado(s) para importação.
+          {pendingCount > 0 ? ` ${pendingCount} registro(s) ainda possuem pendências.` : ""}
+        </div>
+      </Modal>
+    </>
+  );
+}
