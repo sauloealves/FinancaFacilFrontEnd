@@ -1,11 +1,11 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { CategoriesContext } from "./CategoriesContext";
 import { getCategories } from "../../services/categoryService";
 import type { Category } from "../../features/categories/types";
 
-type Props = {
+type Props = Readonly<{
   children: ReactNode;
-};
+}>;
 
 export function CategoriesProvider({ children }: Props) {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -20,10 +20,18 @@ export function CategoriesProvider({ children }: Props) {
   }, []);
 
   function addCategory(category: Category) {
+    if (!category?.id) {
+      return;
+    }
+
     setCategories(prev => [...prev, category]);
   }
 
   function editCategory(updated: Category) {
+    if (!updated?.id) {
+      return;
+    }
+
     setCategories(prev => prev.map(c => c.id === updated.id ? updated : c));
   }
 
@@ -31,9 +39,17 @@ export function CategoriesProvider({ children }: Props) {
     setCategories(prev => prev.filter(c => c.id !== id));
   }
 
+  const contextValue = useMemo(() => ({
+    categories,
+    reloadCategories: loadCategories,
+    addCategory,
+    editCategory,
+    removeCategory,
+  }), [categories]);
+
   return (
     <CategoriesContext.Provider
-      value={{ categories, reloadCategories: loadCategories, addCategory, editCategory, removeCategory }}
+      value={contextValue}
     >
       {children}
     </CategoriesContext.Provider>

@@ -231,10 +231,18 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
       {/* CAMPOS BASE */}
       <div className="transfer-section">
         <Input
+          label="Data inicial"
+          type="date"
+          autoFocus
+          value={form.startDate}
+          error={errors.startDate}
+          onChange={e => setForm({ ...form, startDate: e.target.value })}
+        />
+
+        <Input
           label="Descrição"
           value={form.description}
-          error={errors.description}
-          autoFocus
+          error={errors.description}          
           inputRef={descriptionInputRef}
           onChange={e => {
             const v = e.target.value;
@@ -284,15 +292,7 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
             <button type="button" className="btn-small" onClick={() => { setAccountTarget('to'); setShowAccountModal(true); }}>+</button>
           </div>
           {errors.toAccount && <span className="input-error">{errors.toAccount}</span>}
-        </div>
-
-        <Input
-          label="Data inicial"
-          type="date"
-          value={form.startDate}
-          error={errors.startDate}
-          onChange={e => setForm({ ...form, startDate: e.target.value })}
-        />
+        </div>        
       </div>
 
       {/* TIPO */}

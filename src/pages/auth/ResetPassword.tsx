@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { resetPassword } from "../../services/authService";
+import { getErrorMessage } from "../../services/api";
 import Input from "../../components/ui/Input/Input";
 import Button from "../../components/ui/Button/Button";
 import "./ResetPassword.css";
@@ -51,8 +52,8 @@ export default function ResetPassword() {
     try {
       await resetPassword(token, password);
       setShowSuccess(true);
-    } catch {
-      setErrorMessage("Nao foi possivel redefinir a senha. Tente novamente.");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Nao foi possivel redefinir a senha. Tente novamente."));
     } finally {
       setIsSubmitting(false);
     }

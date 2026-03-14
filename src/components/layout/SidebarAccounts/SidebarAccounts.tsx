@@ -5,12 +5,13 @@ import "./SidebarAccounts.css";
 
 export default function SidebarAccounts() {
   const { accounts } = useAccounts();
-    const { selectedAccounts, toggleAccount } = useAccountFilter();
+  const { selectedAccounts, toggleAccount } = useAccountFilter();
+  const visibleAccounts = accounts.filter((account) => account?.id);
     
 
   return (
     <div className="sidebar-accounts">
-      {accounts.map(account => {
+      {visibleAccounts.map(account => {
         const isSelected = selectedAccounts.includes(account.id);
 
         return (

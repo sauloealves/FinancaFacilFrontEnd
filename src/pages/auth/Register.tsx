@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { register } from "../../services/authService";
+import { getErrorMessage } from "../../services/api";
 import Input from "../../components/ui/Input/Input";
 import Button from "../../components/ui/Button/Button";
 import "./Register.css";
@@ -49,8 +50,8 @@ export default function Register() {
       await register(form);
       setShowSuccess(true);
       setCountdown(5);
-    } catch {
-      setErrorMessage("Não foi possível concluir o cadastro. E-mail já cadastrado. Tente novamente.");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Não foi possível concluir o cadastro. Tente novamente."));
     } finally {
       setIsSubmitting(false);
     }

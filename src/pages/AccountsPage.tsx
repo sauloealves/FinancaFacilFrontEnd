@@ -4,6 +4,7 @@ import {
   updateAccount,
   deleteAccount
 } from "../services/accountService";
+import { getErrorMessage } from "../services/api";
 import AccountModal from "../features/accounts/components/AccountModal";
 import AccountTable from "../features/accounts/components/AccountTable";
 import type { Account } from "../features/accounts/types";
@@ -52,7 +53,7 @@ export default function AccountsPage() {
     }
     catch (error) {
       console.log(error);
-      alert("Ocorreu um erro ao salvar a conta.");
+      alert(getErrorMessage(error, "Ocorreu um erro ao salvar a conta."));
     }
   }
 
@@ -62,8 +63,8 @@ export default function AccountsPage() {
     try {
       await deleteAccount(id);
       removeAccount(id);
-    } catch {
-      alert("Erro ao excluir conta.");
+    } catch (error) {
+      alert(getErrorMessage(error, "Erro ao excluir conta."));
     }
   }
 

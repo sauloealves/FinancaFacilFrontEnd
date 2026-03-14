@@ -6,6 +6,7 @@ import { useLocation, useNavigate } from "react-router";
 import { Link } from "react-router-dom";
 import { useAuth } from "../../contexts/auth/AuthContext";
 import { login as loginApi } from "../../services/authService";
+import { getErrorMessage } from "../../services/api";
 
 export default function Login() {
   const { login, message } = useAuth();
@@ -30,15 +31,11 @@ export default function Login() {
         password,
       });
 
-      login(response.data.token);
+      login(response.token);
 
       navigate(from, { replace: true });
-    } catch (err: any) {
-      if (err.response?.status === 401) {
-        setError("E-mail ou senha inválidos.");
-      } else {
-        setError("Erro ao tentar autenticar.");
-      }
+    } catch (err) {
+      setError(getErrorMessage(err, "Erro ao tentar autenticar."));
     } finally {
       setLoading(false);
     }

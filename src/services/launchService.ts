@@ -1,5 +1,9 @@
 import api from "./api";
-import type { LaunchRow } from "../features/launches/types";
+import type {
+  LaunchRow,
+  LaunchType,
+  OccurrenceType,
+} from "../features/launches/types";
 
 export type GetTransactionsFilter = {
   accountId?: string;
@@ -50,25 +54,97 @@ export type CreateTransactionPayload =
       endDate?: string | null;
     };
 
-export async function getLaunches(filter?: GetTransactionsFilter): Promise<LaunchRow[]> {
-  const { data } = await api.get<any[]>("/transactions", { params: filter });
-  const normalized = data.map(item => normalizeLaunchFromAPI(item));
-  return detectAndConvertTransfers(normalized, data);
+type LaunchPayloadShape = {
+  type?: string;
+  description?: string;
+  value?: number;
+  categoryId?: string;
+  accountId?: string;
+  fromAccountId?: string;
+  toAccountId?: string;
+  startDate?: string;
+  occurrenceType?: string;
+  transactionId?: string;
+  date?: string;
+};
+
+type RawLaunchApiItem = {
+  id?: string;
+  date?: string;
+  description?: string;
+  type?: string;
+  value?: number;
+  occurrenceType?: string;
+  occurrenceGroupId?: string;
+  accountId?: string;
+  categoryId?: string;
+  fromAccountId?: string;
+  toAccountId?: string;
+};
+
+function buildFallbackLaunchId(): string {
+  const generatedId = globalThis.crypto?.randomUUID?.();
+  return generatedId ?? `tmp-${Date.now()}`;
 }
 
-/**
- * Detecta pares de transferências (mesmo occurrenceGroupId) e as converte em registros únicos
- * Se há um Income e um Expense com o mesmo occurrenceGroupId (tipo Single),
- * eles representam uma única transferência
- */
-function detectAndConvertTransfers(normalized: LaunchRow[], rawData: any[]): LaunchRow[] {
-  const transferGroupMap = new Map<string, any[]>();
-  const processedIds = new Set<string>();
-  const result: LaunchRow[] = [];
+function normalizeLaunchType(type?: string): LaunchType {
+  if (type === "income" || type === "expense" || type === "transfer") {
+    return type;
+  }
 
-  // Agrupa dados brutos por occurrenceGroupId
+  return "expense";
+}
+
+function normalizeOccurrenceType(type?: string): OccurrenceType {
+  if (type === "installment" || type === "recurring" || type === "single") {
+    return type;
+  }
+
+  return "single";
+}
+
+function toTransferLaunch(
+  groupId: string,
+  items: RawLaunchApiItem[],
+): LaunchRow | null {
+  if (items.length !== 2) {
+    return null;
+  }
+
+  const income = items.find((item) => item.type?.toLowerCase() === "income");
+  const expense = items.find((item) => item.type?.toLowerCase() === "expense");
+
+  if (!income || !expense) {
+    return null;
+  }
+
+  if (!income.id || !expense.id || !expense.date || !expense.accountId || !income.accountId) {
+    return null;
+  }
+
+  return {
+    id: expense.id,
+    date: expense.date,
+    description: expense.description || "Transferência",
+    type: "transfer",
+    value: expense.value ?? 0,
+    occurrenceType: "single",
+    groupId,
+    fromAccount: { id: expense.accountId },
+    toAccount: { id: income.accountId },
+  };
+}
+
+function groupTransfersByOccurrence(
+  rawData: RawLaunchApiItem[],
+): Map<string, RawLaunchApiItem[]> {
+  const transferGroupMap = new Map<string, RawLaunchApiItem[]>();
+
   for (const item of rawData) {
-    if (item.occurrenceGroupId && item.occurrenceType?.toLowerCase() === "single") {
+    if (
+      item.occurrenceGroupId &&
+      item.occurrenceType?.toLowerCase() === "single"
+    ) {
       const groupId = item.occurrenceGroupId;
       if (!transferGroupMap.has(groupId)) {
         transferGroupMap.set(groupId, []);
@@ -77,30 +153,47 @@ function detectAndConvertTransfers(normalized: LaunchRow[], rawData: any[]): Lau
     }
   }
 
+  return transferGroupMap;
+}
+
+function getIncomeId(items: RawLaunchApiItem[]): string | undefined {
+  return items.find((item) => item.type?.toLowerCase() === "income")?.id;
+}
+
+export async function getLaunches(
+  filter?: GetTransactionsFilter,
+): Promise<LaunchRow[]> {
+  const { data } = await api.get<RawLaunchApiItem[]>("/transactions", {
+    params: filter,
+  });
+  const normalized = data.map((item) => normalizeLaunchFromAPI(item));
+  return detectAndConvertTransfers(normalized, data);
+}
+
+/**
+ * Detecta pares de transferências (mesmo occurrenceGroupId) e as converte em registros únicos
+ * Se há um Income e um Expense com o mesmo occurrenceGroupId (tipo Single),
+ * eles representam uma única transferência
+ */
+function detectAndConvertTransfers(
+  normalized: LaunchRow[],
+  rawData: RawLaunchApiItem[],
+): LaunchRow[] {
+  const transferGroupMap = groupTransfersByOccurrence(rawData);
+  const processedIds = new Set<string>();
+  const result: LaunchRow[] = [];
+
   // Processa cada grupo
   for (const [groupId, items] of transferGroupMap.entries()) {
-    // Se há exatamente 2 itens: um Income e um Expense = transferência
-    if (items.length === 2) {
-      const income = items.find((i: any) => i.type?.toLowerCase() === "income");
-      const expense = items.find((i: any) => i.type?.toLowerCase() === "expense");
+    const transfer = toTransferLaunch(groupId, items);
 
-      if (income && expense) {
-        // É uma transferência!
-        const transfer: LaunchRow = {
-          id: expense.id, // Usa o ID do expense como principal
-          date: expense.date,
-          description: expense.description || "Transferência",
-          type: "transfer",
-          value: expense.value,
-          occurrenceType: "single",
-          groupId: groupId,
-          fromAccount: { id: expense.accountId },
-          toAccount: { id: income.accountId },
-        };
+    if (transfer) {
+      result.push(transfer);
+      processedIds.add(transfer.id);
 
-        result.push(transfer);
-        processedIds.add(income.id);
-        processedIds.add(expense.id);
+      const incomeId = getIncomeId(items);
+      if (incomeId) {
+        processedIds.add(incomeId);
       }
     }
   }
@@ -115,15 +208,19 @@ function detectAndConvertTransfers(normalized: LaunchRow[], rawData: any[]): Lau
   return result;
 }
 
-function normalizeLaunchFromAPI(item: any): LaunchRow {
+function normalizeLaunchFromAPI(item: RawLaunchApiItem | null | undefined): LaunchRow {
   try {
+    if (!item || typeof item !== "object") {
+      throw new Error("Resposta vazia ou inválida.");
+    }
+
     const base: LaunchRow = {
-      id: item.id,
-      date: item.date,
+      id: item.id ?? "",
+      date: item.date ?? "",
       description: item.description ?? "",
-      type: (item.type?.toLowerCase() ?? "expense") as any,
+      type: normalizeLaunchType(item.type?.toLowerCase()),
       value: item.value ?? 0,
-      occurrenceType: (item.occurrenceType?.toLowerCase() ?? "single") as any,
+      occurrenceType: normalizeOccurrenceType(item.occurrenceType?.toLowerCase()),
       groupId: item.occurrenceGroupId,
     };
 
@@ -150,14 +247,65 @@ function normalizeLaunchFromAPI(item: any): LaunchRow {
     return base;
   } catch (err) {
     console.error("Erro ao normalizar lançamento:", item, err);
-    throw new Error(`Erro ao processar lançamento: ${err instanceof Error ? err.message : "Unknown error"}`);
+    throw new Error(
+      `Erro ao processar lançamento: ${err instanceof Error ? err.message : "Unknown error"}`,
+    );
   }
+}
+
+function buildLaunchFromPayload(
+  id: string,
+  payload: LaunchPayloadShape,
+): LaunchRow {
+  const type = normalizeLaunchType(payload.type?.toLowerCase());
+  const fallback: LaunchRow = {
+    id,
+    date: payload.startDate ?? payload.date ?? "",
+    description: payload.description ?? "",
+    type,
+    value: payload.value ?? 0,
+    occurrenceType: normalizeOccurrenceType(payload.occurrenceType?.toLowerCase()),
+  };
+
+  if (type === "transfer") {
+    if (payload.fromAccountId) {
+      fallback.fromAccount = { id: payload.fromAccountId };
+    }
+
+    if (payload.toAccountId) {
+      fallback.toAccount = { id: payload.toAccountId };
+    }
+
+    return fallback;
+  }
+
+  if (payload.accountId) {
+    fallback.account = { id: payload.accountId };
+  }
+
+  if (payload.categoryId) {
+    fallback.category = { id: payload.categoryId };
+  }
+
+  return fallback;
 }
 
 export async function createTransaction(payload: CreateTransactionPayload) {
   try {
-    const { data } = await api.post<any>("/transactions", payload);
+    const { data } = await api.post<RawLaunchApiItem | null | undefined>("/transactions", payload);
     console.log("Resposta do servidor (create):", data);
+
+    if (!data || typeof data !== "object") {
+      return buildLaunchFromPayload(buildFallbackLaunchId(), payload);
+    }
+
+    if (!data.id) {
+      return normalizeLaunchFromAPI({
+        ...buildLaunchFromPayload(buildFallbackLaunchId(), payload),
+        ...data,
+      });
+    }
+
     return normalizeLaunchFromAPI(data);
   } catch (err) {
     console.error("Erro ao criar transação:", err);
@@ -165,10 +313,22 @@ export async function createTransaction(payload: CreateTransactionPayload) {
   }
 }
 
-export async function updateLaunch(id: string, payload: Partial<CreateTransactionPayload>) {
+export async function updateLaunch(
+  id: string,
+  payload: Partial<CreateTransactionPayload>,
+) {
   try {
-    const { data } = await api.put<any>(`/transactions/${id}`, payload);
+    const { data } = await api.put<RawLaunchApiItem | null>(`/transactions/${id}`, payload);
     console.log("Resposta do servidor (update):", data);
+
+    if (!data || typeof data !== "object") {
+      return buildLaunchFromPayload(id, payload);
+    }
+
+    if (!data.id) {
+      return normalizeLaunchFromAPI({ ...buildLaunchFromPayload(id, payload), ...data });
+    }
+
     return normalizeLaunchFromAPI(data);
   } catch (err) {
     console.error("Erro ao atualizar lançamento:", err);
@@ -178,7 +338,10 @@ export async function updateLaunch(id: string, payload: Partial<CreateTransactio
 
 export type DeleteLaunchScope = "OnlyThis" | "FromFirst" | "FromThis";
 
-export async function deleteLaunch(id: string, scope: DeleteLaunchScope = "OnlyThis") {
+export async function deleteLaunch(
+  id: string,
+  scope: DeleteLaunchScope = "OnlyThis",
+) {
   await api.delete(`/transactions/${id}`, {
     params: { scope },
   });
@@ -189,15 +352,28 @@ export type GetBalanceResponse = {
   referenceDate: string;
 };
 
-export async function getOpeningBalance(year: number, month: number, day: number, accountIds?: string[]): Promise<number> {
+export async function getOpeningBalance(
+  year: number,
+  month: number,
+  day: number,
+  accountIds?: string[],
+): Promise<number> {
   try {
-    const params: any = { year, month, day };
+    const params: {
+      year: number;
+      month: number;
+      day: number;
+      accountIds?: string[];
+    } = { year, month, day };
     if (accountIds && accountIds.length > 0) {
       params.accountIds = accountIds;
     }
-    const { data } = await api.get<GetBalanceResponse>("/transactions/GetBalance", {
-      params,
-    });
+    const { data } = await api.get<GetBalanceResponse>(
+      "/transactions/GetBalance",
+      {
+        params,
+      },
+    );
     return data.balance;
   } catch (err) {
     console.error("Erro ao buscar saldo inicial:", err);

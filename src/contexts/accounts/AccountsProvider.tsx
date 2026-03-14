@@ -1,11 +1,11 @@
-import { useState, useEffect, type ReactNode } from "react";
+import { useState, useEffect, useMemo, type ReactNode } from "react";
 import { AccountsContext } from "./AccountsContext";
 import { getAccounts } from "../../services/accountService";
 import type { Account } from "../../features/accounts/types";
 
-type Props = {
+type Props = Readonly<{
   children: ReactNode;
-};
+}>;
 
 export function AccountsProvider({ children }: Props) {
   const [accounts, setAccounts] = useState<Account[]>([]);
@@ -20,10 +20,18 @@ export function AccountsProvider({ children }: Props) {
   }, []);
 
   function addAccount(account: Account) {
+    if (!account?.id) {
+      return;
+    }
+
     setAccounts(prev => [...prev, account]);
   }
 
   function editAccount(updated: Account) {
+    if (!updated?.id) {
+      return;
+    }
+
     setAccounts(prev =>
       prev.map(a =>
         a.id === updated.id ? updated : a
@@ -37,15 +45,17 @@ export function AccountsProvider({ children }: Props) {
     );
   }
 
+  const contextValue = useMemo(() => ({
+    accounts,
+    reloadAccounts: loadAccounts,
+    addAccount,
+    editAccount,
+    removeAccount,
+  }), [accounts]);
+
   return (
     <AccountsContext.Provider
-      value={{
-        accounts,
-        reloadAccounts: loadAccounts,
-        addAccount,
-        editAccount,
-        removeAccount,
-      }}
+      value={contextValue}
     >
       {children}
     </AccountsContext.Provider>

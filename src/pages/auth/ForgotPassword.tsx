@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { forgotPassword } from "../../services/authService";
+import { getErrorMessage } from "../../services/api";
 import Input from "../../components/ui/Input/Input";
 import Button from "../../components/ui/Button/Button";
 import "./ForgotPassword.css";
@@ -31,8 +32,8 @@ export default function ForgotPassword() {
     try {
       await forgotPassword(email);
       setShowSuccess(true);
-    } catch {
-      setErrorMessage("Nao foi possivel enviar a recuperacao de senha. Tente novamente.");
+    } catch (error) {
+      setErrorMessage(getErrorMessage(error, "Nao foi possivel enviar a recuperacao de senha. Tente novamente."));
     } finally {
       setIsSubmitting(false);
     }

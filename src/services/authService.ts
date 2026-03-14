@@ -1,18 +1,36 @@
 import api from "./api";
 
-export const register = (data: {
+type AuthPayload = {
+  token: string;
+  user: {
+    id: string;
+    email: string;
+  };
+};
+
+export async function register(data: {
   name: string;
   email: string;
   password: string;
-}) => api.post("/auth/register", data);
+}) {
+  const { data: response } = await api.post<AuthPayload>("/auth/register", data);
+  return response;
+}
 
-export const login = (data: {
+export async function login(data: {
   email: string;
   password: string;
-}) => api.post("/auth/login", data);
+}) {
+  const { data: response } = await api.post<AuthPayload>("/auth/login", data);
+  return response;
+}
 
-export const forgotPassword = (email: string) =>
-  api.post("/auth/forgot-password", { email });
+export async function forgotPassword(email: string) {
+  const { data } = await api.post<unknown>("/auth/forgot-password", { email });
+  return data;
+}
 
-export const resetPassword = (token: string, newPassword: string) =>
-  api.post("/auth/reset-password", { token, newPassword });
+export async function resetPassword(token: string, newPassword: string) {
+  const { data } = await api.post<unknown>("/auth/reset-password", { token, newPassword });
+  return data;
+}

@@ -5,6 +5,7 @@ import {
   updateCategory,
   deleteCategory,
 } from "../services/categoryService";
+import { getErrorMessage } from "../services/api";
 import CategoryModal from "../features/categories/CategoryModal";
 import CategoryTable from "../features/categories/CategoryTable";
 import type { Category } from "../features/categories/types";
@@ -31,7 +32,7 @@ export default function CategoriesPage() {
       setEditing(null);
     } catch (error) {
       console.error(error);
-      alert("Erro ao salvar categoria.");
+      alert(getErrorMessage(error, "Erro ao salvar categoria."));
     }
   }
 
@@ -43,7 +44,7 @@ export default function CategoriesPage() {
       removeCategory(id);
     } catch (error) {
       console.error(error);
-      alert("Erro ao excluir categoria.");
+      alert(getErrorMessage(error, "Erro ao excluir categoria."));
     }
   }
 
