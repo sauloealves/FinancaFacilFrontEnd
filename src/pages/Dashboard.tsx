@@ -1,5 +1,5 @@
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Card, Modal, Button, Input } from "../components/ui";
 import { useLaunches } from "../contexts/launches/useLaunches";
 import { useAccounts } from "../contexts/accounts/useAccounts";
@@ -7,7 +7,10 @@ import { usePeriod } from "../contexts/usePeriodo";
 import { useAccountFilter } from "../contexts/AccountFilterContext";
 import { isTransactionType } from "../utils/sortUtils";
 import ExpenseChart from "../features/charts/ExpenseChart";
+import MonthlyComparisonChart from "../features/charts/MonthlyComparisonChart";
 import { askAi } from "../services/aiService";
+import { getLaunches as fetchLaunches, type GetTransactionsFilter } from "../services/launchService";
+import type { LaunchRow } from "../features/launches/types";
 
 import "./Dashboard.css";
 
@@ -17,19 +20,67 @@ export default function DashboardPage() {
   const [aiResponse, setAiResponse] = useState("");
   const [aiError, setAiError] = useState("");
   const [isAskingAi, setIsAskingAi] = useState(false);
+  const [previousMonthLaunches, setPreviousMonthLaunches] = useState<LaunchRow[]>([]);
   const { launches } = useLaunches();
   const { accounts } = useAccounts();
   const { month } = usePeriod();
   const { selectedAccounts } = useAccountFilter();
 
-  const dashboardData = useMemo(() => {
-    const now = new Date();
-    const currentDate = now.toISOString().split("T")[0];
+  useEffect(() => {
+    let mounted = true;
 
-    const filteredLaunches =
+    function getPreviousMonth(monthText: string): string {
+      const [yearText, monthNumberText] = monthText.split("-");
+      const year = Number(yearText);
+      const monthNumber = Number(monthNumberText);
+
+      if (monthNumber > 1) {
+        return `${year}-${String(monthNumber - 1).padStart(2, "0")}`;
+      }
+
+      return `${year - 1}-12`;
+    }
+
+    function getDateRangeFromMonth(monthText: string) {
+      const [year, monthNumber] = monthText.split("-");
+      const startDate = `${year}-${monthNumber}-01`;
+      const nextMonth = new Date(Number(year), Number(monthNumber), 1);
+      nextMonth.setDate(0);
+      const endDate = nextMonth.toISOString().split("T")[0];
+
+      return { startDate, endDate };
+    }
+
+    async function loadPreviousMonthLaunches() {
+      try {
+        const previousMonth = getPreviousMonth(month);
+        const { startDate, endDate } = getDateRangeFromMonth(previousMonth);
+        const filter: GetTransactionsFilter = { startDate, endDate };
+        const data = await fetchLaunches(filter);
+
+        if (mounted) {
+          setPreviousMonthLaunches(data ?? []);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar lançamentos do mês anterior:", error);
+        if (mounted) {
+          setPreviousMonthLaunches([]);
+        }
+      }
+    }
+
+    void loadPreviousMonthLaunches();
+
+    return () => {
+      mounted = false;
+    };
+  }, [month]);
+
+  const dashboardData = useMemo(() => {
+    const filterLaunchesBySelectedAccounts = (sourceLaunches: LaunchRow[]) =>
       selectedAccounts.length === 0
-        ? launches
-        : launches.filter((launch) => {
+        ? sourceLaunches
+        : sourceLaunches.filter((launch) => {
             if (isTransactionType(launch.type, "transfer")) {
               return (
                 selectedAccounts.includes(launch.fromAccount?.id ?? "") ||
@@ -39,6 +90,16 @@ export default function DashboardPage() {
 
             return selectedAccounts.includes(launch.account?.id ?? "");
           });
+
+    const now = new Date();
+    const currentDate = now.toISOString().split("T")[0];
+
+    const filteredLaunches = filterLaunchesBySelectedAccounts(launches);
+    const filteredPreviousMonthLaunches = filterLaunchesBySelectedAccounts(previousMonthLaunches);
+    const comparisonLaunches = [
+      ...filteredPreviousMonthLaunches,
+      ...filteredLaunches,
+    ];
 
     const filteredAccounts =
       selectedAccounts.length === 0
@@ -94,8 +155,9 @@ export default function DashboardPage() {
       recentLaunches,
       upcomingLaunches,
       filteredLaunches,
+      comparisonLaunches,
     };
-  }, [launches, accounts, month, selectedAccounts]);
+  }, [launches, previousMonthLaunches, accounts, month, selectedAccounts]);
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString("pt-BR", {
@@ -120,8 +182,8 @@ export default function DashboardPage() {
     try {
       setIsAskingAi(true);
       setAiError("");
-      const response = await askAi(trimmedQuery);
-      setAiResponse(response);
+      const descricao = await askAi(trimmedQuery);
+      setAiResponse(descricao);
     } catch (error) {
       console.error("Erro ao consultar IA:", error);
       setAiResponse("");
@@ -204,10 +266,27 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* GRÁFICO DE DESPESAS */}
-        <Card title="Despesas por categoria">
-          <ExpenseChart launches={dashboardData.filteredLaunches} month={month} />
-        </Card>
+        <div className="dashboard-charts-grid">
+          <Card title="Despesas por categoria">
+            <ExpenseChart launches={dashboardData.filteredLaunches} month={month} maxItems={10} />
+          </Card>
+
+          <Card>
+            <MonthlyComparisonChart
+              launches={dashboardData.comparisonLaunches}
+              month={month}
+              type="expense"
+            />
+          </Card>
+
+          <Card>
+            <MonthlyComparisonChart
+              launches={dashboardData.comparisonLaunches}
+              month={month}
+              type="income"
+            />
+          </Card>
+        </div>
 
         <Card title="Pergunte para a IA">
           <div className="dashboard-ai">

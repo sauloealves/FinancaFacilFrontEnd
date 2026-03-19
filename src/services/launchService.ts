@@ -1,4 +1,5 @@
-import api from "./api";
+import axios from "axios";
+import api, { getErrorMessage } from "./api";
 import type {
   LaunchRow,
   LaunchType,
@@ -82,6 +83,29 @@ type RawLaunchApiItem = {
   toAccountId?: string;
 };
 
+export type BatchCreateTransactionItem = {
+  clientId: string;
+  payload: CreateTransactionPayload;
+};
+
+export type BatchCreateTransactionsResult = {
+  successClientIds: string[];
+  failedByClientId: Map<string, string>;
+};
+
+type IndexedBatchError = {
+  index: number;
+  message: string;
+};
+
+const DEFAULT_TRANSACTIONS_BATCH_ENDPOINT = (
+  (import.meta.env.VITE_TRANSACTIONS_BATCH_ENDPOINT as string | undefined)?.trim() ||
+  "/transactions/batch"
+).replace(/\/+$/, "");
+
+const MAX_BATCH_ITEMS = 250;
+const MAX_BATCH_PAYLOAD_BYTES = 900 * 1024;
+
 function buildFallbackLaunchId(): string {
   const generatedId = globalThis.crypto?.randomUUID?.();
   return generatedId ?? `tmp-${Date.now()}`;
@@ -158,6 +182,190 @@ function groupTransfersByOccurrence(
 
 function getIncomeId(items: RawLaunchApiItem[]): string | undefined {
   return items.find((item) => item.type?.toLowerCase() === "income")?.id;
+}
+
+function estimatePayloadSizeInBytes(payload: unknown): number {
+  return new TextEncoder().encode(JSON.stringify(payload)).length;
+}
+
+function splitBatchItems(
+  items: BatchCreateTransactionItem[],
+): { chunks: BatchCreateTransactionItem[][]; oversizedItems: BatchCreateTransactionItem[] } {
+  const chunks: BatchCreateTransactionItem[][] = [];
+  const oversizedItems: BatchCreateTransactionItem[] = [];
+  let currentChunk: BatchCreateTransactionItem[] = [];
+  let currentChunkSize = 2;
+
+  for (const item of items) {
+    const itemSize = estimatePayloadSizeInBytes(item.payload);
+
+    if (itemSize > MAX_BATCH_PAYLOAD_BYTES) {
+      oversizedItems.push(item);
+      continue;
+    }
+
+    const separatorSize = currentChunk.length > 0 ? 1 : 0;
+    const nextChunkSize = currentChunkSize + separatorSize + itemSize;
+
+    if (
+      currentChunk.length >= MAX_BATCH_ITEMS ||
+      nextChunkSize > MAX_BATCH_PAYLOAD_BYTES
+    ) {
+      if (currentChunk.length > 0) {
+        chunks.push(currentChunk);
+      }
+
+      currentChunk = [item];
+      currentChunkSize = 2 + itemSize;
+      continue;
+    }
+
+    currentChunk.push(item);
+    currentChunkSize = nextChunkSize;
+  }
+
+  if (currentChunk.length > 0) {
+    chunks.push(currentChunk);
+  }
+
+  return { chunks, oversizedItems };
+}
+
+function extractBatchErrorsFromObject(payload: Record<string, unknown>): IndexedBatchError[] {
+  const indexedErrors: IndexedBatchError[] = [];
+
+  const results = payload.results;
+  if (Array.isArray(results)) {
+    results.forEach((result, index) => {
+      if (!result || typeof result !== "object") {
+        return;
+      }
+
+      const success = (result as { success?: unknown }).success;
+      const message =
+        (result as { error?: unknown }).error ??
+        (result as { message?: unknown }).message;
+
+      if (success === false) {
+        indexedErrors.push({
+          index,
+          message:
+            typeof message === "string" && message.trim()
+              ? message
+              : "Falha ao processar o registro no lote.",
+        });
+      }
+    });
+  }
+
+  const failureCollections = [payload.errors, payload.failed, payload.failures];
+  for (const collection of failureCollections) {
+    if (!Array.isArray(collection)) {
+      continue;
+    }
+
+    collection.forEach((entry) => {
+      if (!entry || typeof entry !== "object") {
+        return;
+      }
+
+      const rawIndex = (entry as { index?: unknown }).index;
+      const message =
+        (entry as { message?: unknown }).message ??
+        (entry as { error?: unknown }).error;
+
+      if (typeof rawIndex !== "number" || rawIndex < 0) {
+        return;
+      }
+
+      indexedErrors.push({
+        index: rawIndex,
+        message:
+          typeof message === "string" && message.trim()
+            ? message
+            : "Falha ao processar o registro no lote.",
+      });
+    });
+  }
+
+  return indexedErrors;
+}
+
+function extractIndexedBatchErrors(responseData: unknown): IndexedBatchError[] {
+  if (!responseData || typeof responseData !== "object" || Array.isArray(responseData)) {
+    return [];
+  }
+
+  return extractBatchErrorsFromObject(responseData as Record<string, unknown>);
+}
+
+function shouldSplitBatchAfterError(error: unknown): boolean {
+  if (!axios.isAxiosError(error)) {
+    return false;
+  }
+
+  const status = error.response?.status;
+  return status === 400 || status === 409 || status === 413 || status === 422;
+}
+
+async function importBatchChunk(
+  items: BatchCreateTransactionItem[],
+): Promise<BatchCreateTransactionsResult> {
+  try {
+    const { data } = await api.post<unknown>(
+      DEFAULT_TRANSACTIONS_BATCH_ENDPOINT,
+      items.map((item) => item.payload),
+    );
+
+    const failedByClientId = new Map<string, string>();
+    const indexedErrors = extractIndexedBatchErrors(data);
+
+    for (const error of indexedErrors) {
+      const item = items[error.index];
+      if (!item) {
+        continue;
+      }
+
+      failedByClientId.set(item.clientId, error.message);
+    }
+
+    return {
+      successClientIds: items
+        .filter((item) => !failedByClientId.has(item.clientId))
+        .map((item) => item.clientId),
+      failedByClientId,
+    };
+  } catch (error) {
+    if (items.length > 1 && shouldSplitBatchAfterError(error)) {
+      const middleIndex = Math.ceil(items.length / 2);
+      const [leftChunk, rightChunk] = [
+        items.slice(0, middleIndex),
+        items.slice(middleIndex),
+      ];
+      const leftResult = await importBatchChunk(leftChunk);
+      const rightResult = await importBatchChunk(rightChunk);
+
+      return {
+        successClientIds: [
+          ...leftResult.successClientIds,
+          ...rightResult.successClientIds,
+        ],
+        failedByClientId: new Map([
+          ...leftResult.failedByClientId,
+          ...rightResult.failedByClientId,
+        ]),
+      };
+    }
+
+    const message = getErrorMessage(error, "Falha ao importar o lote de lançamentos.");
+
+    return {
+      successClientIds: [],
+      failedByClientId: new Map(
+        items.map((item) => [item.clientId, message]),
+      ),
+    };
+  }
 }
 
 export async function getLaunches(
@@ -313,6 +521,42 @@ export async function createTransaction(payload: CreateTransactionPayload) {
   }
 }
 
+export async function importTransactionsBatch(
+  items: BatchCreateTransactionItem[],
+): Promise<BatchCreateTransactionsResult> {
+  if (items.length === 0) {
+    return {
+      successClientIds: [],
+      failedByClientId: new Map(),
+    };
+  }
+
+  const { chunks, oversizedItems } = splitBatchItems(items);
+  const failedByClientId = new Map<string, string>();
+  const successClientIds: string[] = [];
+
+  for (const item of oversizedItems) {
+    failedByClientId.set(
+      item.clientId,
+      "O registro excede o limite de payload JSON permitido para importação. Reduza a descrição ou divida a importação.",
+    );
+  }
+
+  for (const chunk of chunks) {
+    const result = await importBatchChunk(chunk);
+    successClientIds.push(...result.successClientIds);
+
+    result.failedByClientId.forEach((message, clientId) => {
+      failedByClientId.set(clientId, message);
+    });
+  }
+
+  return {
+    successClientIds,
+    failedByClientId,
+  };
+}
+
 export async function updateLaunch(
   id: string,
   payload: Partial<CreateTransactionPayload>,
@@ -359,20 +603,20 @@ export async function getOpeningBalance(
   accountIds?: string[],
 ): Promise<number> {
   try {
-    const params: {
-      year: number;
-      month: number;
-      day: number;
-      accountIds?: string[];
-    } = { year, month, day };
+    const params = new URLSearchParams({
+      year: String(year),
+      month: String(month),
+      day: String(day),
+    });
+
     if (accountIds && accountIds.length > 0) {
-      params.accountIds = accountIds;
+      for (const accountId of accountIds) {
+        params.append("accountIds", accountId);
+      }
     }
+
     const { data } = await api.get<GetBalanceResponse>(
-      "/transactions/GetBalance",
-      {
-        params,
-      },
+      `/transactions/GetBalance?${params.toString()}`,
     );
     return data.balance;
   } catch (err) {

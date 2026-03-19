@@ -27,7 +27,8 @@ export default function LaunchesPage() {
   const [pendingDelete, setPendingDelete] = useState<LaunchRow | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState("");
-  const [openingBalance, setOpeningBalance] = useState<number>(0);
+  const [historicalOpeningBalance, setHistoricalOpeningBalance] = useState<number>(0);
+  const [ignoreHistoricalBalance, setIgnoreHistoricalBalance] = useState(false);
   const [loadingBalance, setLoadingBalance] = useState<boolean>(true);
   const { selectedAccounts } = useAccountFilter();
   const { launches, reloadLaunches } = useLaunches();
@@ -38,19 +39,22 @@ export default function LaunchesPage() {
     const loadBalance = async () => {
       setLoadingBalance(true);
       const [year, monthNum] = month.split("-");
-      // Se há contas selecionadas, busca saldo apenas delas; caso contrário, busca total
+
       const balance = await getOpeningBalance(
         Number(year), 
         Number(monthNum), 
         1,
         selectedAccounts.length > 0 ? selectedAccounts : undefined
       );
-      setOpeningBalance(balance);
+
+      setHistoricalOpeningBalance(balance);
       setLoadingBalance(false);
     };
 
-    loadBalance();
+    void loadBalance();
   }, [month, selectedAccounts]);
+
+  const openingBalance = ignoreHistoricalBalance ? 0 : historicalOpeningBalance;
 
   const filteredLaunches =
   selectedAccounts.length === 0
@@ -116,6 +120,8 @@ export default function LaunchesPage() {
         <div style={{ padding: "20px", textAlign: "center" }}>Carregando saldo inicial...</div>
       ) : (
         <LaunchTable data={tableData} 
+          ignoreHistoricalBalance={ignoreHistoricalBalance}
+          onIgnoreHistoricalBalanceChange={setIgnoreHistoricalBalance}
           onEdit={row => setEditing(row)}
           onDelete={handleDelete}
         />

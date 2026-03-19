@@ -17,7 +17,7 @@ export default function AccountModal({
     onSave,
 }: Props) {
     const [name, setName] = useState("");
-    const [initialBalance, setInitialBalance] = useState(0);
+    const [initialBalanceInput, setInitialBalanceInput] = useState("0");
     const initialFocusRef = useRef<HTMLInputElement>(null);
 
     useEffect(() => {
@@ -30,7 +30,7 @@ export default function AccountModal({
     useEffect(() => {
         if (account) {
             setName(account.name);
-            setInitialBalance(account.initialBalance);
+            setInitialBalanceInput(String(account.initialBalance));
         }
     }, [account]);
 
@@ -48,7 +48,11 @@ export default function AccountModal({
         };
     }, [onClose]);
 
-    const valid = name.trim().length > 0;
+    const parsedInitialBalance = Number(initialBalanceInput);
+    const valid =
+        name.trim().length > 0 &&
+        initialBalanceInput.trim().length > 0 &&
+        Number.isFinite(parsedInitialBalance);
 
     return (
         <div
@@ -80,9 +84,10 @@ export default function AccountModal({
                         <input
                             type="number"
                             placeholder="Saldo Inicial"
-                            value={initialBalance}
+                            step="any"
+                            value={initialBalanceInput}
                             onChange={(e) =>
-                                setInitialBalance(Number(e.target.value))
+                                setInitialBalanceInput(e.target.value)
                             }
                         />
                     </div>
@@ -102,7 +107,10 @@ export default function AccountModal({
                         className="btn-salvar"
                         disabled={!valid}
                         onClick={() =>
-                            onSave({ name, initialBalance })
+                            onSave({
+                                name,
+                                initialBalance: parsedInitialBalance,
+                            })
                         }
                     >
                         Salvar

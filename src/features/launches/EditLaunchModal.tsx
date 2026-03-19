@@ -166,7 +166,7 @@ export default function EditLaunchModal({
                 </div>
 
                 {/* FORM */}
-                <div className="form-row">
+                <div className={`form-row ${isTransactionType(type, "transfer") ? "transfer-form-row" : ""}`}>
 
                     <Input
                     label="Data"
@@ -185,7 +185,7 @@ export default function EditLaunchModal({
 
                     {type !== "transfer" && (
                         <>
-                            <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                            <div className="edit-launch-inline-action">
                                 <SearchableSelect
                                     label="Categoria"
                                     items={categories}
@@ -201,7 +201,7 @@ export default function EditLaunchModal({
                                 <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>+</button>
                             </div>
 
-                            <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                            <div className="edit-launch-inline-action">
                                 <SearchableSelect
                                     label="Conta"
                                     items={accounts}
@@ -218,7 +218,7 @@ export default function EditLaunchModal({
 
                     {isTransactionType(type, "transfer") && (
                         <>
-                            <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                            <div className="edit-launch-inline-action">
                                 <SearchableSelect
                                     label="De Conta"
                                     items={accounts}
@@ -231,7 +231,7 @@ export default function EditLaunchModal({
                                 <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
                             </div>
 
-                            <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+                            <div className="edit-launch-inline-action">
                                 <SearchableSelect
                                     label="Para Conta"
                                     items={accounts}
@@ -242,9 +242,6 @@ export default function EditLaunchModal({
                                     placeholder="Buscar conta..."
                                 />
                                 <button type="button" className="btn-small" onClick={() => setShowAccountModal(true)}>+</button>
-                            </div>
-                            <div style={{ display: 'inline-flex', alignItems: 'center', marginLeft: 8 }}>
-                                <button type="button" className="btn-small" onClick={() => setShowCategoryModal(true)}>+</button>
                             </div>
                         </>
                     )}

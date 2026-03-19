@@ -22,6 +22,17 @@
   gap: var(--space-3);
 }
 
+.dashboard-charts-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-3);
+  align-items: stretch;
+}
+
+.dashboard-charts-grid .card {
+  min-height: 100%;
+}
+
 /* KPI VALUES */
 .kpi-value {
   font-size: 24px;
@@ -85,4 +96,26 @@
   background: var(--gray-50);
   color: var(--gray-800);
   line-height: 1.45;
+}
+
+@media (max-width: 1180px) {
+  .dashboard-charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .dashboard-kpis {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .dashboard-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .dashboard-kpis {
+    grid-template-columns: 1fr;
+  }
 }

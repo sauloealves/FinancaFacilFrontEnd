@@ -1,7 +1,8 @@
 import api from "./api";
 
 type AskAiApiResponse = {
-  response: string;
+  descricao?: string;
+  response?: string;
 };
 
 export async function askAi(query: string): Promise<string> {
@@ -9,5 +10,5 @@ export async function askAi(query: string): Promise<string> {
     params: { query },
   });
 
-  return data.response ?? "Sem resposta da IA.";
+  return data.descricao ?? data.response ?? "Sem resposta da IA.";
 }

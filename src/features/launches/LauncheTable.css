@@ -9,11 +9,34 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  gap: var(--space-3);
+  flex-wrap: wrap;
 }
 
 .opening-balance {
   color: var(--gray-700);
   font-size: var(--font-body);
+}
+
+.opening-balance-group {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.opening-balance-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--gray-700);
+  font-size: var(--font-label);
+  cursor: pointer;
+}
+
+.opening-balance-toggle input {
+  margin: 0;
 }
 
 /* DAY GROUP */

@@ -1,0 +1,195 @@
+.monthly-comparison {
+  --chart-primary: #0f5e94;
+  --chart-secondary: red;
+  --chart-track: #e9eef4;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+}
+
+.monthly-comparison-expense {
+  --chart-primary: #0f5e94;
+  --chart-secondary: red;
+}
+
+.monthly-comparison-income {
+  --chart-primary: #0f5e94;
+  --chart-secondary: red;
+}
+
+.monthly-comparison-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  text-align: center;
+}
+
+.monthly-comparison-kicker {
+  color: #0ba99c;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  text-align: left;
+}
+
+.monthly-comparison-subtitle {
+  color: var(--gray-700);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.monthly-comparison-visual {
+  position: relative;
+  display: grid;
+  place-items: center;
+  min-height: 300px;
+}
+
+.monthly-comparison-ring {
+  position: absolute;
+  border-radius: 50%;
+  transform: rotate(-130deg);
+}
+
+.monthly-comparison-ring::before,
+.monthly-comparison-ring::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+
+.monthly-comparison-ring::before {
+  background: conic-gradient(
+    from 0deg,
+    var(--chart-primary) calc(var(--progress) * 280deg),
+    transparent 0 280deg,
+    transparent 0 360deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px));
+}
+
+.monthly-comparison-ring::after {
+  background: conic-gradient(
+    from 0deg,
+    var(--chart-track) 0 280deg,
+    transparent 0 360deg
+  );
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 14px), #000 calc(100% - 13px));
+  z-index: -1;
+}
+
+.monthly-comparison-ring-outer {
+  width: 260px;
+  height: 260px;
+}
+
+.monthly-comparison-ring-outer::before {
+  background: conic-gradient(
+    from 0deg,
+    var(--chart-primary) calc(var(--progress) * 280deg),
+    transparent 0 360deg
+  );
+}
+
+.monthly-comparison-ring-inner {
+  width: 224px;
+  height: 224px;
+}
+
+.monthly-comparison-ring-inner::before {
+  background: conic-gradient(
+    from 0deg,
+    var(--chart-secondary) calc(var(--progress) * 280deg),
+    transparent 0 360deg
+  );
+}
+
+.monthly-comparison-center {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  text-align: center;
+}
+
+.monthly-comparison-center-label {
+  color: var(--gray-700);
+  font-size: 1.05rem;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.monthly-comparison-center-value {
+  color: var(--gray-800);
+  font-size: 1.5rem;
+  font-weight: 500;
+}
+
+.monthly-comparison-footer {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  align-items: start;
+}
+
+.monthly-comparison-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.monthly-comparison-stat.previous {
+  text-align: right;
+}
+
+.monthly-comparison-stat-label {
+  color: var(--gray-700);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.monthly-comparison-stat-month {
+  color: var(--gray-500);
+  font-size: 0.82rem;
+  text-transform: capitalize;
+}
+
+.monthly-comparison-stat strong {
+  color: var(--gray-800);
+  font-size: 1.7rem;
+  font-weight: 500;
+}
+
+@media (max-width: 900px) {
+  .monthly-comparison-visual {
+    min-height: 260px;
+  }
+
+  .monthly-comparison-ring-outer {
+    width: 220px;
+    height: 220px;
+  }
+
+  .monthly-comparison-ring-inner {
+    width: 188px;
+    height: 188px;
+  }
+
+  .monthly-comparison-center-value {
+    font-size: 1.65rem;
+  }
+
+  .monthly-comparison-stat strong {
+    font-size: 1.35rem;
+  }
+}

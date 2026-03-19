@@ -10,7 +10,7 @@ import type { Category } from "../categories/types";
 import { createAccount, getAccounts } from "../../services/accountService";
 import { createCategory, getCategories } from "../../services/categoryService";
 import {
-  createTransaction,
+  importTransactionsBatch,
   type CreateTransactionPayload,
 } from "../../services/launchService";
 import {
@@ -74,6 +74,8 @@ type ParsedExcelRow = {
   accountName: string;
   isTransfer: boolean;
 };
+
+type ImportRowIssueLevel = 0 | 1 | 2;
 
 function normalizeLookupValue(value: string): string {
   return value
@@ -242,6 +244,18 @@ function buildPayload(row: ImportRow): CreateTransactionPayload {
   };
 }
 
+function getRowIssueLevel(row: ImportRow): ImportRowIssueLevel {
+  if (row.serverError || getBlockingErrors(row).length > 0) {
+    return 2;
+  }
+
+  if (row.notes.length > 0) {
+    return 1;
+  }
+
+  return 0;
+}
+
 export function downloadTransactionsImportTemplate() {
   const workbook = XLSX.utils.book_new();
   const worksheet = XLSX.utils.json_to_sheet([
@@ -302,6 +316,20 @@ export default function ImportTransactionsAction() {
   const selectedCount = rows.filter((row) => row.selected).length;
   const allSelected = rows.length > 0 && rows.every((row) => row.selected);
   const pendingCount = rows.filter((row) => getBlockingErrors(row).length > 0).length;
+  const displayRows = rows
+    .map((row, index) => ({
+      row,
+      index,
+      issueLevel: getRowIssueLevel(row),
+    }))
+    .sort((left, right) => {
+      if (right.issueLevel !== left.issueLevel) {
+        return right.issueLevel - left.issueLevel;
+      }
+
+      return left.index - right.index;
+    })
+    .map(({ row }) => row);
 
   function resetState() {
     setIsChooserOpen(false);
@@ -682,20 +710,29 @@ export default function ImportTransactionsAction() {
     setSubmitError("");
     setSubmitSuccess("");
 
-    const failedById = new Map<string, string>();
-    const successIds = new Set<string>();
+    let failedById = new Map<string, string>();
+    let successIds = new Set<string>();
 
-    for (const row of selectedRowsToImport) {
-      try {
-        await createTransaction(buildPayload(row));
-        successIds.add(row.id);
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error
-            ? error.message
-            : "Falha ao enviar o registro para o servidor.";
-        failedById.set(row.id, errorMessage);
-      }
+    try {
+      const result = await importTransactionsBatch(
+        selectedRowsToImport.map((row) => ({
+          clientId: row.id,
+          payload: buildPayload(row),
+        }))
+      );
+
+      failedById = result.failedByClientId;
+      successIds = new Set(result.successClientIds);
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "Falha ao enviar o lote para o servidor.";
+
+      setIsImporting(false);
+      setSubmitError(message);
+      setSubmitSuccess("");
+      return;
     }
 
     try {
@@ -843,7 +880,7 @@ export default function ImportTransactionsAction() {
                 <div className="import-transactions-grid-cell">Observações</div>
               </div>
 
-              {rows.map((row) => {
+              {displayRows.map((row) => {
                 const rowErrors = getBlockingErrors(row);
                 const rowKind: TransactionKind =
                   row.rowType === "transfer" ? "transfer" : getRegularKind(row.amountInput);
