@@ -33,6 +33,7 @@ export default function AppLayout() {
               title={title}
               month={["/", "/launches", "/dashboard"].includes(location.pathname) ? month : undefined}
               onMonthChange={setMonth}
+              showImportAction={location.pathname === "/launches"}
             />
             <main className="app-content">
               <Outlet />

@@ -1,3 +1,43 @@
+.import-transactions-trigger {
+  border: none;
+  background: #16a34a;
+  color: var(--white);
+  min-height: 40px;
+  padding: 10px 16px;
+  border-radius: var(--radius-md);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  font-size: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.import-transactions-trigger:hover {
+  background: #15803d;
+}
+
+.import-transactions-trigger:focus-visible {
+  outline: 2px solid #15803d;
+  outline-offset: 2px;
+}
+
+.import-transactions-trigger-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  flex: 0 0 18px;
+}
+
+.import-transactions-trigger-icon svg {
+  width: 100%;
+  height: 100%;
+}
+
 .import-transactions-intro {
   display: flex;
   flex-direction: column;

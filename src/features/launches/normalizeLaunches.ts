@@ -5,12 +5,43 @@ type NormalizeInput = {
   month: string;
   openingBalance: number;
   launches: LaunchRow[];
+  selectedAccounts?: string[];
 };
+
+function calculateRowBalanceImpact(
+  row: LaunchRow,
+  selectedAccounts: string[],
+): number {
+  if (isTransactionType(row.type, "income")) {
+    return row.value;
+  }
+
+  if (isTransactionType(row.type, "expense")) {
+    return -row.value;
+  }
+
+  if (selectedAccounts.length === 0) {
+    return 0;
+  }
+
+  let impact = 0;
+
+  if (row.fromAccount?.id && selectedAccounts.includes(row.fromAccount.id)) {
+    impact -= row.value;
+  }
+
+  if (row.toAccount?.id && selectedAccounts.includes(row.toAccount.id)) {
+    impact += row.value;
+  }
+
+  return impact;
+}
 
 export function normalizeLaunches({
   month,
   openingBalance,
   launches,
+  selectedAccounts = [],
 }: NormalizeInput): LaunchTableData {
   // 1️⃣ Filtra apenas o mês
   const monthLaunches = launches.filter(l =>
@@ -37,6 +68,7 @@ export function normalizeLaunches({
   for (const [date, rows] of byDay.entries()) {
     let incomeTotal = 0;
     let expenseTotal = 0;
+    let dayBalanceImpact = 0;
 
     for (const row of rows) {
       if (isTransactionType(row.type, "income")) {
@@ -44,10 +76,11 @@ export function normalizeLaunches({
       } else if (isTransactionType(row.type, "expense")) {
         expenseTotal += row.value;
       }
-      // transfer não altera saldo global
+
+      dayBalanceImpact += calculateRowBalanceImpact(row, selectedAccounts);
     }
 
-    runningBalance = runningBalance + incomeTotal - expenseTotal;
+    runningBalance += dayBalanceImpact;
 
     days.push({
       date,

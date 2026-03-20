@@ -1,8 +1,9 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 type AccountFilterContextType = {
   selectedAccounts: string[];
   toggleAccount: (id: string) => void;
+  pruneSelectedAccounts: (validIds: string[]) => void;
 };
 
 const AccountFilterContext = createContext<
@@ -11,9 +12,9 @@ const AccountFilterContext = createContext<
 
 export function AccountFilterProvider({
   children,
-}: {
-  children: React.ReactNode;
-}) {
+}: Readonly<{
+  children: ReactNode;
+}>) {
   const [selectedAccounts, setSelectedAccounts] =
     useState<string[]>([]);
 
@@ -25,9 +26,22 @@ export function AccountFilterProvider({
     );
   }
 
+  function pruneSelectedAccounts(validIds: string[]) {
+    setSelectedAccounts((prev) => {
+      const next = prev.filter((id) => validIds.includes(id));
+      return next.length === prev.length ? prev : next;
+    });
+  }
+
+  const contextValue = useMemo(() => ({
+    selectedAccounts,
+    toggleAccount,
+    pruneSelectedAccounts,
+  }), [selectedAccounts]);
+
   return (
     <AccountFilterContext.Provider
-      value={{ selectedAccounts, toggleAccount }}
+      value={contextValue}
     >
       {children}
     </AccountFilterContext.Provider>

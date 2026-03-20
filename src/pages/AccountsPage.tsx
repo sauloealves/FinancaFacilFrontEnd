@@ -27,6 +27,9 @@ export default function AccountsPage() {
   const [showModal, setShowModal] =
     useState(false);
 
+  const enabledAccounts = accounts.filter((account) => account.isEnabled);
+  const disabledAccounts = accounts.filter((account) => !account.isEnabled);
+
   async function handleSave(data: {
     name: string;
     initialBalance: number;
@@ -35,7 +38,10 @@ export default function AccountsPage() {
       if (editing) {
         const updated = await updateAccount(
           editing.id,
-          data
+          {
+            ...data,
+            isEnabled: editing.isEnabled,
+          }
         );
 
         editAccount(updated);
@@ -68,6 +74,28 @@ export default function AccountsPage() {
     }
   }
 
+  async function handleToggleEnabled(account: Account) {
+    const nextIsEnabled = !account.isEnabled;
+    const confirmationMessage = nextIsEnabled
+      ? `Deseja habilitar a conta ${account.name}?`
+      : `Deseja desabilitar a conta ${account.name}?`;
+
+    if (!confirm(confirmationMessage)) return;
+
+    try {
+      const updated = await updateAccount(account.id, {
+        name: account.name,
+        initialBalance: account.initialBalance,
+        isEnabled: nextIsEnabled,
+      });
+
+      editAccount(updated);
+      await reloadAccounts();
+    } catch (error) {
+      alert(getErrorMessage(error, "Erro ao atualizar o status da conta."));
+    }
+  }
+
   return (
     <div className="accounts-page">
       <div className="page-header">
@@ -83,14 +111,41 @@ export default function AccountsPage() {
         </button>
       </div>
 
-      <AccountTable
-        accounts={accounts}
-        onEdit={(account) => {
-          setEditing(account);
-          setShowModal(true);
-        }}
-        onDelete={handleDelete}
-      />
+      <section className="accounts-section">
+        <div className="accounts-section-header">
+          <h3>Contas habilitadas</h3>
+          <span>{enabledAccounts.length} conta(s)</span>
+        </div>
+
+        <AccountTable
+          accounts={enabledAccounts}
+          emptyMessage="Nenhuma conta habilitada encontrada."
+          onEdit={(account) => {
+            setEditing(account);
+            setShowModal(true);
+          }}
+          onDelete={handleDelete}
+          onToggleEnabled={handleToggleEnabled}
+        />
+      </section>
+
+      <section className="accounts-section">
+        <div className="accounts-section-header">
+          <h3>Contas desabilitadas</h3>
+          <span>{disabledAccounts.length} conta(s)</span>
+        </div>
+
+        <AccountTable
+          accounts={disabledAccounts}
+          emptyMessage="Nenhuma conta desabilitada encontrada."
+          onEdit={(account) => {
+            setEditing(account);
+            setShowModal(true);
+          }}
+          onDelete={handleDelete}
+          onToggleEnabled={handleToggleEnabled}
+        />
+      </section>
 
       {showModal && (
         <AccountModal

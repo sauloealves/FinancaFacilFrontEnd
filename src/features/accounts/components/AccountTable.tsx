@@ -3,15 +3,23 @@ import type { Account } from "../types";
 
 type Props = {
   accounts: Account[];
+  emptyMessage: string;
   onEdit: (account: Account) => void;
   onDelete: (id: string) => void;
+  onToggleEnabled: (account: Account) => void;
 };
 
 export default function AccountTable({
   accounts,
+  emptyMessage,
   onEdit,
   onDelete,
-}: Props) {
+  onToggleEnabled,
+}: Readonly<Props>) {
+  if (accounts.length === 0) {
+    return <div className="accounts-empty-state">{emptyMessage}</div>;
+  }
+
   return (
     <table className="accounts-table">
       <thead>
@@ -53,6 +61,13 @@ export default function AccountTable({
                     onClick={() => onEdit(account)}
                 >
                     ✏ Editar
+                </button>
+
+                <button
+                  className={`btn-action ${account.isEnabled ? "disable" : "enable"}`}
+                  onClick={() => onToggleEnabled(account)}
+                >
+                  {account.isEnabled ? "Inativar" : "Habilitar"}
                 </button>
 
                 <button

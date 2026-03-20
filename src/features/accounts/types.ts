@@ -3,5 +3,6 @@ export type Account = {
   name: string;
   initialBalance: number;
   currentBalance: number;
+  isEnabled: boolean;
   isDeleted: boolean;
 };

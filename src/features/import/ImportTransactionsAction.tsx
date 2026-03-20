@@ -777,9 +777,16 @@ export default function ImportTransactionsAction() {
         onChange={handleFileChange}
       />
 
-      <Button variant="secondary" onClick={openChooser}>
-        Importar Excel
-      </Button>
+      <button type="button" className="import-transactions-trigger" onClick={openChooser}>
+        <span className="import-transactions-trigger-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" focusable="false">
+            <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm0 1.5L17.5 7H14z" fill="currentColor" opacity="0.18" />
+            <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm0 1.5L17.5 7H14zM7 4h6v4h4v12H7z" fill="currentColor" />
+            <path d="M9.2 16.8 10.9 14l-1.6-2.8h1.6l.9 1.7.9-1.7h1.6L12.7 14l1.7 2.8h-1.6l-1-1.8-1 1.8z" fill="#ffffff" />
+          </svg>
+        </span>
+        <span>Importar Excel</span>
+      </button>
 
       <Modal
         isOpen={isChooserOpen}

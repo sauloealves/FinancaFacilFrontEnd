@@ -1,6 +1,52 @@
 .accounts-table {
   width: 100%;
   border-collapse: collapse;
+  background: var(--white);
+}
+
+.accounts-page {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
+.accounts-section {
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: var(--space-3);
+}
+
+.accounts-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-3);
+}
+
+.accounts-section-header h3 {
+  margin: 0;
+}
+
+.accounts-section-header span {
+  color: var(--gray-500);
+  font-size: var(--font-label);
+}
+
+.accounts-empty-state {
+  padding: var(--space-4);
+  border: 1px dashed var(--gray-300);
+  border-radius: var(--radius-md);
+  text-align: center;
+  color: var(--gray-500);
 }
 
 .accounts-table th,
@@ -103,6 +149,24 @@
 
 .btn-action.delete:hover {
   background: #b91c1c;
+}
+
+.btn-action.enable {
+  background: #166534;
+  color: white;
+}
+
+.btn-action.enable:hover {
+  background: #14532d;
+}
+
+.btn-action.disable {
+  background: #92400e;
+  color: white;
+}
+
+.btn-action.disable:hover {
+  background: #78350f;
 }
 
 /* Efeito clique */

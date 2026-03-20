@@ -6,6 +6,7 @@ type AccountPayload = {
   name?: string;
   initialBalance?: number;
   currentBalance?: number;
+  isEnabled?: boolean;
   isDeleted?: boolean;
 };
 
@@ -22,6 +23,7 @@ function normalizeAccount(
     name: payload?.name ?? fallback?.name ?? "",
     initialBalance: payload?.initialBalance ?? fallback?.initialBalance ?? 0,
     currentBalance: payload?.currentBalance ?? fallback?.currentBalance ?? 0,
+    isEnabled: payload?.isEnabled ?? fallback?.isEnabled ?? true,
     isDeleted: payload?.isDeleted ?? fallback?.isDeleted ?? false,
   };
 }
@@ -44,6 +46,7 @@ export async function createAccount(payload: {
     name: payload.name,
     initialBalance: payload.initialBalance,
     currentBalance: payload.initialBalance,
+    isEnabled: true,
   });
 }
 
@@ -52,6 +55,7 @@ export async function updateAccount(
   payload: {
     name: string;
     initialBalance: number;
+    isEnabled?: boolean;
   },
 ) {
   const { data } = await api.put<AccountPayload | null>(`/accounts/${id}`, payload);
@@ -59,6 +63,7 @@ export async function updateAccount(
     id,
     name: payload.name,
     initialBalance: payload.initialBalance,
+    isEnabled: payload.isEnabled,
   });
 }
 

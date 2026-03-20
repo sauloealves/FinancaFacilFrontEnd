@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { useAccountFilter } from "../../../contexts/AccountFilterContext";
 import { useAccounts } from "../../../contexts/accounts/useAccounts";
 import { formatBRLInputSigned } from "../../../utils/currency";
@@ -5,9 +6,12 @@ import "./SidebarAccounts.css";
 
 export default function SidebarAccounts() {
   const { accounts } = useAccounts();
-  const { selectedAccounts, toggleAccount } = useAccountFilter();
-  const visibleAccounts = accounts.filter((account) => account?.id);
-    
+  const { selectedAccounts, toggleAccount, pruneSelectedAccounts } = useAccountFilter();
+  const visibleAccounts = accounts.filter((account) => account?.id && account.isEnabled);
+
+  useEffect(() => {
+    pruneSelectedAccounts(visibleAccounts.map((account) => account.id));
+  }, [pruneSelectedAccounts, visibleAccounts]);
 
   return (
     <div className="sidebar-accounts">

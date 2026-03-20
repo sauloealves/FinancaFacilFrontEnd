@@ -176,6 +176,9 @@
   inset: 0;
   z-index: 1000;
   background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
 }
 
 /* RIGHT */
@@ -184,27 +187,7 @@
   justify-content: flex-end;
   align-items: center;
   gap: var(--space-2);
-}
-
-.header-import-actions {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-}
-
-.header-import-link {
-  background: none;
-  border: none;
-  padding: 0;
-  color: var(--primary-600);
-  cursor: pointer;
-  font-size: var(--font-body);
-  font-weight: 500;
-  text-decoration: underline;
-}
-
-.header-import-link:hover {
-  color: var(--primary-700);
+  flex-wrap: wrap;
 }
 
 /* USER */

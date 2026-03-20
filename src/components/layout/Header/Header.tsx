@@ -4,18 +4,20 @@ import "./Header.css";
 import RevenueModal from "../../../features/revenue/RevenueModal";
 import ExpenseModal from '../../../features/expense/expenseModal';
 import TransferModal from '../../../features/transfer/TransferModal';
+import ImportTransactionsAction from "../../../features/import/ImportTransactionsAction";
 import { formatMonthBR } from "../../../utils/date";
 
 type HeaderProps = {
   title?: string;
   month?: string;
   onMonthChange?: (month: string) => void;
+  showImportAction?: boolean;
 };
 
 function getNextMonth(monthStr: string): string {
   const [year, month] = monthStr.split("-");
-  let nextMonth = parseInt(month) + 1;
-  let nextYear = parseInt(year);
+  let nextMonth = Number.parseInt(month, 10) + 1;
+  let nextYear = Number.parseInt(year, 10);
   if (nextMonth > 12) {
     nextMonth = 1;
     nextYear += 1;
@@ -25,8 +27,8 @@ function getNextMonth(monthStr: string): string {
 
 function getPreviousMonth(monthStr: string): string {
   const [year, month] = monthStr.split("-");
-  let prevMonth = parseInt(month) - 1;
-  let prevYear = parseInt(year);
+  let prevMonth = Number.parseInt(month, 10) - 1;
+  let prevYear = Number.parseInt(year, 10);
   if (prevMonth < 1) {
     prevMonth = 12;
     prevYear -= 1;
@@ -34,14 +36,19 @@ function getPreviousMonth(monthStr: string): string {
   return `${prevYear}-${String(prevMonth).padStart(2, "0")}`;
 }
 
-export default function Header({ title = "Dashboard", month, onMonthChange }: HeaderProps) {
+export default function Header({
+  title = "Dashboard",
+  month,
+  onMonthChange,
+  showImportAction = false,
+}: Readonly<HeaderProps>) {
   const [openRevenue, setOpenRevenue] = useState(false);
   const [openExpense, setOpenExpense] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   
-  const currentYear = month ? parseInt(month.split("-")[0]) : new Date().getFullYear();
-  const currentMonth = month ? parseInt(month.split("-")[1]) : new Date().getMonth() + 1;
+  const currentYear = month ? Number.parseInt(month.split("-")[0], 10) : new Date().getFullYear();
+  const currentMonth = month ? Number.parseInt(month.split("-")[1], 10) : new Date().getMonth() + 1;
   
   const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -114,7 +121,7 @@ export default function Header({ title = "Dashboard", month, onMonthChange }: He
                   <div className="month-grid">
                     {months.map((monthName, index) => (
                       <button
-                        key={index}
+                        key={monthName}
                         className={`month-option ${currentMonth === index + 1 ? "active" : ""}`}
                         onClick={() => handleMonthSelect(index + 1)}
                       >
@@ -137,14 +144,17 @@ export default function Header({ title = "Dashboard", month, onMonthChange }: He
       </div>
 
       {showMonthPicker && (
-        <div
+        <button
+          type="button"
           className="month-picker-overlay"
           onClick={() => setShowMonthPicker(false)}
+          aria-label="Fechar seletor de mês"
         />
       )}
 
       {/* RIGHT */}
       <div className="header-right">
+        {showImportAction && <ImportTransactionsAction />}
         <Button onClick={() => setOpenRevenue(true)}>+ Receita</Button>
         <Button variant="danger" onClick={() => setOpenExpense(true)}>+ Despesa</Button>
         <Button variant="secondary" onClick={() => setOpenTransfer(true)}>+ Transferência</Button>

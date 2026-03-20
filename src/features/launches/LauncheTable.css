@@ -13,12 +13,40 @@
   flex-wrap: wrap;
 }
 
+.collapse-all-button {
+  border: 1px solid var(--primary-600);
+  background-color: #eff6ff;
+  color: var(--primary-700);
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: var(--font-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.collapse-all-button:hover {
+  background-color: #dbeafe;
+}
+
+.collapse-all-button:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}
+
 .opening-balance {
   color: var(--gray-700);
   font-size: var(--font-body);
 }
 
 .opening-balance-group {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.opening-balance-row {
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -48,9 +76,62 @@
 
 /* DAY HEADER */
 .day-header {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
   padding: var(--space-3);
+  background-color: #eff6ff;
+  color: var(--primary-700);
   border-bottom: 1px solid var(--gray-200);
   font-weight: 600;
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  border: 1px solid var(--primary-600);
+  cursor: pointer;
+  text-align: left;
+}
+
+.day-header-main {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+  flex-wrap: wrap;
+}
+
+.day-header:focus-visible {
+  outline: 2px solid var(--primary-600);
+  outline-offset: 2px;
+}
+
+.day-collapsed-balance {
+  font-size: var(--font-label);
+  color: var(--gray-700);
+}
+
+.day-header-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.day-count {
+  font-size: var(--font-label);
+  color: var(--gray-700);
+}
+
+.day-toggle-indicator {
+  min-width: 28px;
+  height: 28px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background-color: var(--primary-600);
+  color: var(--white);
+  font-size: 18px;
+  line-height: 1;
 }
 
 /* ROWS */
