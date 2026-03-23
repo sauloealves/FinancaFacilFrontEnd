@@ -317,7 +317,7 @@ export default function RevenueModal({
 
         {/* CATEGORIA */}
         <div className="input-group">
-            <div className="category-inline-actions">
+            <div className="category-inline-actions revenue-inline-actions">
               <SearchableSelect
                 label="Categoria"
                 items={sortCategoriesHierarchically(categories)}
@@ -350,7 +350,7 @@ export default function RevenueModal({
 
         {/* CONTA */}
         <div className="input-group">
-            <div className="category-inline-actions">
+            <div className="category-inline-actions revenue-inline-actions">
               <SearchableSelect
                 label="Conta"
                 items={sortAccountsAlphabetically(accounts)}

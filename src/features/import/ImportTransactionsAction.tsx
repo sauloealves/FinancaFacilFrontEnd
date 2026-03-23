@@ -9,6 +9,7 @@ import type { Account } from "../accounts/types";
 import type { Category } from "../categories/types";
 import { createAccount, getAccounts } from "../../services/accountService";
 import { createCategory, getCategories } from "../../services/categoryService";
+import { importInvoiceDocument, type ImportedInvoiceItem } from "../../services/invoiceService";
 import {
   importTransactionsBatch,
   type CreateTransactionPayload,
@@ -23,6 +24,10 @@ import {
 } from "../../utils/sortUtils";
 import "./ImportTransactionsAction.css";
 
+type ImportTransactionsActionProps = {
+  compact?: boolean;
+};
+
 const REQUIRED_COLUMNS = [
   "Data Ocorrência",
   "Descrição",
@@ -32,6 +37,8 @@ const REQUIRED_COLUMNS = [
 ] as const;
 
 const EXCEL_ACCEPT = ".xlsx,.xls,.xlsm,.xlsb";
+const DOCUMENT_ACCEPT = ".pdf,.csv,.ods";
+const IMPORT_ACCEPT = `${EXCEL_ACCEPT},${DOCUMENT_ACCEPT}`;
 
 type RequiredColumn = (typeof REQUIRED_COLUMNS)[number];
 type ExcelRow = Record<string, unknown>;
@@ -75,6 +82,13 @@ type ParsedExcelRow = {
   isTransfer: boolean;
 };
 
+type ParsedDocumentRow = {
+  sourceLine: number;
+  date: string;
+  description: string;
+  value: number;
+};
+
 type ImportRowIssueLevel = 0 | 1 | 2;
 
 function normalizeLookupValue(value: string): string {
@@ -93,6 +107,18 @@ function isExcelFile(file: File): boolean {
   );
 }
 
+function isInvoiceDocumentFile(file: File): boolean {
+  const fileName = file.name.toLowerCase();
+  return [".pdf", ".csv", ".ods"].some((extension) => fileName.endsWith(extension));
+}
+
+function getStringValue(value: unknown): string {
+  if (typeof value === "string") return value;
+  if (typeof value === "number") return String(value);
+  if (value instanceof Date) return value.toISOString();
+  return "";
+}
+
 function parseLocalizedNumber(value: unknown): number {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : 0;
@@ -102,7 +128,7 @@ function parseLocalizedNumber(value: unknown): number {
     return value.getTime();
   }
 
-  const raw = String(value ?? "").trim();
+  const raw = getStringValue(value).trim();
   if (!raw) return 0;
 
   const cleaned = raw
@@ -130,14 +156,24 @@ function normalizeDate(value: unknown): string {
     }
   }
 
-  const raw = String(value ?? "").trim();
+  const raw = getStringValue(value).trim();
   if (!raw) return "";
+
+  const isoWithTimeMatch = /(\d{4})-(\d{2})-(\d{2})/.exec(raw);
+  if (isoWithTimeMatch) {
+    return `${isoWithTimeMatch[1]}-${isoWithTimeMatch[2]}-${isoWithTimeMatch[3]}`;
+  }
+
+  const spacedIsoMatch = /(\d{4})\s+(\d{2})\s+(\d{2})/.exec(raw);
+  if (spacedIsoMatch) {
+    return `${spacedIsoMatch[1]}-${spacedIsoMatch[2]}-${spacedIsoMatch[3]}`;
+  }
 
   if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
     return raw;
   }
 
-  const brMatch = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+  const brMatch = /^(\d{1,2})\/(\d{1,2})\/(\d{4})$/.exec(raw);
   if (brMatch) {
     const [, day, month, year] = brMatch;
     return `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
@@ -159,7 +195,7 @@ function resolveHeaders(sample: ExcelRow): Record<RequiredColumn, string> {
   for (const column of REQUIRED_COLUMNS) {
     const found = lookup.get(normalizeLookupValue(column));
     if (!found) {
-      throw new Error(`A coluna obrigatória \"${column}\" não foi encontrada no arquivo.`);
+      throw new Error(`A coluna obrigatória "${column}" não foi encontrada no arquivo.`);
     }
     resolved[column] = found;
   }
@@ -293,7 +329,9 @@ export function downloadTransactionsImportTemplate() {
   XLSX.writeFile(workbook, "modelo-importacao-lancamentos.xlsx");
 }
 
-export default function ImportTransactionsAction() {
+export default function ImportTransactionsAction({
+  compact = false,
+}: Readonly<ImportTransactionsActionProps>) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { accounts, reloadAccounts } = useAccounts();
   const { categories, reloadCategories } = useCategories();
@@ -302,6 +340,8 @@ export default function ImportTransactionsAction() {
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [rows, setRows] = useState<ImportRow[]>([]);
   const [fileName, setFileName] = useState("");
+  const [isProcessingFile, setIsProcessingFile] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState("");
   const [isImporting, setIsImporting] = useState(false);
   const [creatingKeys, setCreatingKeys] = useState<string[]>([]);
   const [accountOptions, setAccountOptions] = useState<Account[] | null>(null);
@@ -313,6 +353,7 @@ export default function ImportTransactionsAction() {
   const activeCategories = categoryOptions ?? categories;
   const sortedAccounts = sortAccountsAlphabetically(activeAccounts);
   const sortedCategories = sortCategoriesHierarchically(activeCategories);
+  const isBusy = isProcessingFile || isImporting;
   const selectedCount = rows.filter((row) => row.selected).length;
   const allSelected = rows.length > 0 && rows.every((row) => row.selected);
   const pendingCount = rows.filter((row) => getBlockingErrors(row).length > 0).length;
@@ -332,10 +373,13 @@ export default function ImportTransactionsAction() {
     .map(({ row }) => row);
 
   function resetState() {
+    if (isBusy) return;
     setIsChooserOpen(false);
     setIsPreviewOpen(false);
     setRows([]);
     setFileName("");
+    setIsProcessingFile(false);
+    setProcessingMessage("");
     setAccountOptions(null);
     setCategoryOptions(null);
     setSubmitError("");
@@ -346,14 +390,14 @@ export default function ImportTransactionsAction() {
   }
 
   function openChooser() {
-    if (isImporting) return;
+    if (isBusy) return;
     setSubmitError("");
     setSubmitSuccess("");
     setIsChooserOpen(true);
   }
 
   function openFilePicker() {
-    if (isImporting) return;
+    if (isBusy) return;
     setSubmitError("");
     setSubmitSuccess("");
     fileInputRef.current?.click();
@@ -561,42 +605,22 @@ export default function ImportTransactionsAction() {
     }
   }
 
-  async function parseFile(file: File) {
-    if (!isExcelFile(file)) {
-      throw new Error("Selecione um arquivo Excel válido (.xlsx, .xls, .xlsm ou .xlsb).");
+  function openPreviewWithRows(importedRows: ImportRow[], selectedFileName: string) {
+    if (importedRows.length === 0) {
+      throw new Error("Nenhum lançamento válido foi encontrado no arquivo.");
     }
 
-    const buffer = await file.arrayBuffer();
-    const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
-    const sheetName = workbook.SheetNames[0];
-    if (!sheetName) {
-      throw new Error("O arquivo não possui planilhas para importar.");
-    }
+    setRows(importedRows);
+    setFileName(selectedFileName);
+    setIsProcessingFile(false);
+    setProcessingMessage("");
+    setSubmitError("");
+    setSubmitSuccess("");
+    setIsChooserOpen(false);
+    setIsPreviewOpen(true);
+  }
 
-    const worksheet = workbook.Sheets[sheetName];
-    const jsonRows = XLSX.utils.sheet_to_json<ExcelRow>(worksheet, {
-      defval: "",
-      raw: true,
-    });
-
-    if (jsonRows.length === 0) {
-      throw new Error("O arquivo Excel está vazio.");
-    }
-
-    const headers = resolveHeaders(jsonRows[0]);
-    const parsedRows: ParsedExcelRow[] = jsonRows.map((jsonRow, index) => {
-      const categoryName = String(jsonRow[headers["Categoria"]] ?? "").trim();
-      return {
-        sourceLine: index + 2,
-        date: normalizeDate(jsonRow[headers["Data Ocorrência"]]),
-        description: String(jsonRow[headers["Descrição"]] ?? "").trim(),
-        value: parseLocalizedNumber(jsonRow[headers["Valor"]]),
-        categoryName,
-        accountName: String(jsonRow[headers["Conta"]] ?? "").trim(),
-        isTransfer: normalizeLookupValue(categoryName) === "transferencia",
-      };
-    });
-
+  function mapExcelRowsToImportRows(parsedRows: ParsedExcelRow[]): ImportRow[] {
     const importedRows: ImportRow[] = [];
 
     for (let index = 0; index < parsedRows.length; index += 1) {
@@ -606,7 +630,7 @@ export default function ImportTransactionsAction() {
         const notes: string[] = [];
         let shouldConsumeNextRow = false;
 
-        if (!nextRow || !nextRow.isTransfer) {
+        if (!nextRow?.isTransfer) {
           notes.push("Transferência deve possuir a linha seguinte para destino.");
         } else {
           shouldConsumeNextRow = true;
@@ -662,27 +686,104 @@ export default function ImportTransactionsAction() {
       });
     }
 
-    if (importedRows.length === 0) {
-      throw new Error("Nenhum lançamento válido foi encontrado no arquivo.");
+    return importedRows;
+  }
+
+  function mapDocumentRowsToImportRows(parsedRows: ParsedDocumentRow[]): ImportRow[] {
+    return parsedRows.map((row) => ({
+      id: createRowId(),
+      rowType: "regular",
+      selected: true,
+      description: row.description,
+      date: row.date,
+      amountInput: formatBRLInputSigned(-Math.abs(row.value)),
+      categoryId: "",
+      accountId: "",
+      originalCategoryName: "",
+      originalAccountName: "",
+      notes: [],
+      sourceLabel: `Item ${row.sourceLine}`,
+    }));
+  }
+
+  async function parseExcelFile(file: File) {
+    setProcessingMessage("Lendo arquivo Excel e preparando a pré-visualização...");
+    const buffer = await file.arrayBuffer();
+    const workbook = XLSX.read(buffer, { type: "array", cellDates: true });
+    const sheetName = workbook.SheetNames[0];
+    if (!sheetName) {
+      throw new Error("O arquivo não possui planilhas para importar.");
     }
 
-    setRows(importedRows);
-    setFileName(file.name);
-    setSubmitError("");
-    setSubmitSuccess("");
-    setIsChooserOpen(false);
-    setIsPreviewOpen(true);
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonRows = XLSX.utils.sheet_to_json<ExcelRow>(worksheet, {
+      defval: "",
+      raw: true,
+    });
+
+    if (jsonRows.length === 0) {
+      throw new Error("O arquivo Excel está vazio.");
+    }
+
+    const headers = resolveHeaders(jsonRows[0]);
+    const parsedRows: ParsedExcelRow[] = jsonRows.map((jsonRow, index) => {
+      const categoryName = getStringValue(jsonRow[headers["Categoria"]]).trim();
+      return {
+        sourceLine: index + 2,
+        date: normalizeDate(jsonRow[headers["Data Ocorrência"]]),
+        description: getStringValue(jsonRow[headers["Descrição"]]).trim(),
+        value: parseLocalizedNumber(jsonRow[headers["Valor"]]),
+        categoryName,
+        accountName: getStringValue(jsonRow[headers["Conta"]]).trim(),
+        isTransfer: normalizeLookupValue(categoryName) === "transferencia",
+      };
+    });
+
+    openPreviewWithRows(mapExcelRowsToImportRows(parsedRows), file.name);
+  }
+
+  async function parseInvoiceDocumentFile(file: File) {
+    setProcessingMessage("Enviando arquivo para processamento e aguardando retorno...");
+    const importedItems = await importInvoiceDocument(file);
+    const parsedRows: ParsedDocumentRow[] = importedItems.map((item: ImportedInvoiceItem, index) => ({
+      sourceLine: index + 1,
+      date: normalizeDate(item.date),
+      description: getStringValue(item.description).trim(),
+      value: Math.abs(parseLocalizedNumber(item.amount)),
+    }));
+
+    const validRows = parsedRows.filter((row) => row.description || row.date || row.value > 0);
+    openPreviewWithRows(mapDocumentRowsToImportRows(validRows), file.name);
+  }
+
+  async function parseFile(file: File) {
+    if (isExcelFile(file)) {
+      await parseExcelFile(file);
+      return;
+    }
+
+    if (isInvoiceDocumentFile(file)) {
+      await parseInvoiceDocumentFile(file);
+      return;
+    }
+
+    throw new Error("Selecione um arquivo válido (.xlsx, .xls, .xlsm, .xlsb, .pdf, .csv ou .ods).");
   }
 
   async function handleFileChange(event: React.ChangeEvent<HTMLInputElement>) {
     const file = event.target.files?.[0];
     if (!file) return;
 
+    setIsProcessingFile(true);
+    setProcessingMessage("Preparando importação...");
+
     try {
       await parseFile(file);
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Não foi possível ler o arquivo Excel.";
-      window.alert(message);
+      setIsProcessingFile(false);
+      setProcessingMessage("");
+      const message = error instanceof Error ? error.message : "Não foi possível ler o arquivo selecionado.";
+      globalThis.alert(message);
       if (fileInputRef.current) {
         fileInputRef.current.value = "";
       }
@@ -772,12 +873,17 @@ export default function ImportTransactionsAction() {
       <input
         ref={fileInputRef}
         type="file"
-        accept={EXCEL_ACCEPT}
+        accept={IMPORT_ACCEPT}
         style={{ display: "none" }}
         onChange={handleFileChange}
       />
 
-      <button type="button" className="import-transactions-trigger" onClick={openChooser}>
+      <button
+        type="button"
+        className={`import-transactions-trigger ${compact ? "compact" : ""}`}
+        onClick={openChooser}
+        disabled={isBusy}
+      >
         <span className="import-transactions-trigger-icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" focusable="false">
             <path d="M14 2H7a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7zm0 1.5L17.5 7H14z" fill="currentColor" opacity="0.18" />
@@ -785,7 +891,7 @@ export default function ImportTransactionsAction() {
             <path d="M9.2 16.8 10.9 14l-1.6-2.8h1.6l.9 1.7.9-1.7h1.6L12.7 14l1.7 2.8h-1.6l-1-1.8-1 1.8z" fill="#ffffff" />
           </svg>
         </span>
-        <span>Importar Excel</span>
+        <span>Importar</span>
       </button>
 
       <Modal
@@ -795,11 +901,11 @@ export default function ImportTransactionsAction() {
         size="md"
         footer={
           <>
-            <Button variant="secondary" onClick={resetState} disabled={isImporting}>
+            <Button variant="secondary" onClick={resetState} disabled={isBusy}>
               Cancelar
             </Button>
-            <Button onClick={openFilePicker} disabled={isImporting}>
-              Buscar arquivo
+            <Button onClick={openFilePicker} disabled={isBusy}>
+              {isProcessingFile ? "Processando..." : "Buscar arquivo"}
             </Button>
           </>
         }
@@ -807,6 +913,9 @@ export default function ImportTransactionsAction() {
         <div className="import-transactions-intro">
           <p>
             Selecione um arquivo Excel com as colunas <strong>Data Ocorrência</strong>, <strong>Descrição</strong>, <strong>Valor</strong>, <strong>Categoria</strong> e <strong>Conta</strong>.
+          </p>
+          <p>
+            Também é possível enviar arquivos <strong>PDF</strong>, <strong>CSV</strong> e <strong>ODS</strong> de banco para extração automática dos lançamentos antes da revisão.
           </p>
           <p>
             Depois da leitura, o sistema abrirá uma pré-visualização para revisar, mapear contas e categorias e escolher quais registros serão importados.
@@ -818,6 +927,16 @@ export default function ImportTransactionsAction() {
           >
             Baixar modelo
           </button>
+
+          {isProcessingFile && (
+            <div className="import-transactions-loading" role="status" aria-live="polite">
+              <span className="import-transactions-loading-spinner" aria-hidden="true" />
+              <div className="import-transactions-loading-text">
+                <strong>Processando arquivo</strong>
+                <span>{processingMessage || "Aguarde enquanto os lançamentos são preparados."}</span>
+              </div>
+            </div>
+          )}
         </div>
       </Modal>
 
@@ -828,10 +947,10 @@ export default function ImportTransactionsAction() {
         size="xl"
         footer={
           <>
-            <Button variant="secondary" onClick={resetState} disabled={isImporting}>
+            <Button variant="secondary" onClick={resetState} disabled={isBusy}>
               Cancelar
             </Button>
-            <Button onClick={handleImportSelected} disabled={isImporting || rows.length === 0}>
+            <Button onClick={handleImportSelected} disabled={isBusy || rows.length === 0}>
               {isImporting ? "Importando..." : `Importar selecionados (${selectedCount})`}
             </Button>
           </>

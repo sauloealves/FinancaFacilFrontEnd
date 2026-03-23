@@ -12,6 +12,9 @@ type HeaderProps = {
   month?: string;
   onMonthChange?: (month: string) => void;
   showImportAction?: boolean;
+  isSidebarOpen: boolean;
+  isSidebarCollapsed: boolean;
+  onToggleSidebar: () => void;
 };
 
 function getNextMonth(monthStr: string): string {
@@ -41,11 +44,15 @@ export default function Header({
   month,
   onMonthChange,
   showImportAction = false,
+  isSidebarOpen,
+  isSidebarCollapsed,
+  onToggleSidebar,
 }: Readonly<HeaderProps>) {
   const [openRevenue, setOpenRevenue] = useState(false);
   const [openExpense, setOpenExpense] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
+  const [showMobileActions, setShowMobileActions] = useState(false);
   
   const currentYear = month ? Number.parseInt(month.split("-")[0], 10) : new Date().getFullYear();
   const currentMonth = month ? Number.parseInt(month.split("-")[1], 10) : new Date().getMonth() + 1;
@@ -67,15 +74,41 @@ export default function Header({
       onMonthChange(`${year}-${String(currentMonth).padStart(2, "0")}`);
     }
   };
+
+  function handleOpenRevenue() {
+    setShowMobileActions(false);
+    setOpenRevenue(true);
+  }
+
+  function handleOpenExpense() {
+    setShowMobileActions(false);
+    setOpenExpense(true);
+  }
+
+  function handleOpenTransfer() {
+    setShowMobileActions(false);
+    setOpenTransfer(true);
+  }
   
   return (
+    <>
     <header className="header">
-      {/* LEFT */}
       <div className="header-left">
+        <button
+          type="button"
+          className="sidebar-toggle"
+          onClick={onToggleSidebar}
+          aria-label={isSidebarOpen ? "Fechar menu lateral" : "Abrir menu lateral"}
+          aria-expanded={isSidebarOpen}
+          title={isSidebarCollapsed ? "Expandir menu" : "Recolher menu"}
+        >
+          <span className="sidebar-toggle-icon" aria-hidden="true">
+            {isSidebarOpen ? "✕" : "☰"}
+          </span>
+        </button>
         <h2 className="header-title">{title}</h2>
       </div>
 
-      {/* CENTER */}
       <div className="header-center">
         {month && onMonthChange && (
           <div className="month-navigator">
@@ -152,12 +185,13 @@ export default function Header({
         />
       )}
 
-      {/* RIGHT */}
       <div className="header-right">
-        {showImportAction && <ImportTransactionsAction />}
-        <Button onClick={() => setOpenRevenue(true)}>+ Receita</Button>
-        <Button variant="danger" onClick={() => setOpenExpense(true)}>+ Despesa</Button>
-        <Button variant="secondary" onClick={() => setOpenTransfer(true)}>+ Transferência</Button>
+        <div className="header-actions-desktop">
+          {showImportAction && <ImportTransactionsAction />}
+          <Button onClick={handleOpenRevenue}>+ Receita</Button>
+          <Button variant="danger" onClick={handleOpenExpense}>+ Despesa</Button>
+          <Button variant="secondary" onClick={handleOpenTransfer}>+ Transferência</Button>
+        </div>
 
         <RevenueModal
           isOpen={openRevenue}
@@ -179,5 +213,38 @@ export default function Header({
         </div>
       </div>
     </header>
+
+    <button
+      type="button"
+      className={`mobile-actions-backdrop ${showMobileActions ? "visible" : ""}`}
+      onClick={() => setShowMobileActions(false)}
+      aria-label="Fechar ações rápidas"
+    />
+
+    <div className={`mobile-actions-panel ${showMobileActions ? "open" : ""}`}>
+      {showImportAction && <ImportTransactionsAction compact />}
+      <button type="button" className="mobile-action-button revenue" onClick={handleOpenRevenue}>
+        <span aria-hidden="true">↑</span>
+        <span>Receita</span>
+      </button>
+      <button type="button" className="mobile-action-button expense" onClick={handleOpenExpense}>
+        <span aria-hidden="true">↓</span>
+        <span>Despesa</span>
+      </button>
+      <button type="button" className="mobile-action-button transfer" onClick={handleOpenTransfer}>
+        <span aria-hidden="true">⇄</span>
+        <span>Transferência</span>
+      </button>
+    </div>
+
+    <button
+      type="button"
+      className={`mobile-fab ${showMobileActions ? "open" : ""}`}
+      onClick={() => setShowMobileActions((current) => !current)}
+      aria-label={showMobileActions ? "Fechar ações rápidas" : "Abrir ações rápidas"}
+    >
+      {showMobileActions ? "✕" : "+"}
+    </button>
+    </>
   );
 }

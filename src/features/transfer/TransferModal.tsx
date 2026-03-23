@@ -262,7 +262,7 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
 
         {/* CONTA ORIGEM */}
         <div className="input-group">
-          <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+          <div className="transfer-inline-actions">
             <SearchableSelect
               label="Conta origem"
               items={accounts}
@@ -279,7 +279,7 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
 
         {/* CONTA DESTINO */}
         <div className="input-group">
-          <div style={{ display: 'inline-flex', gap: 8, alignItems: 'center' }}>
+          <div className="transfer-inline-actions">
             <SearchableSelect
               label="Conta destino"
               items={accounts}

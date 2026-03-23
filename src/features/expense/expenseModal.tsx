@@ -300,7 +300,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
 
         {/* CATEGORIA */}
         <div className="input-group">
-          <div className="category-inline-actions">
+          <div className="category-inline-actions expense-inline-actions">
             <SearchableSelect
               label="Categoria"
               items={sortCategoriesHierarchically(categories)}
@@ -330,7 +330,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
 
         {/* CONTA */}
         <div className="input-group">
-            <div className="category-inline-actions">
+            <div className="category-inline-actions expense-inline-actions">
               <SearchableSelect
                 label="Conta"
                 items={accounts}
