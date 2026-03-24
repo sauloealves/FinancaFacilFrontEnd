@@ -1,4 +1,3 @@
-
 import { useState, useMemo, useEffect } from "react";
 import { Card, Modal, Button, Input } from "../components/ui";
 import { useLaunches } from "../contexts/launches/useLaunches";
@@ -8,6 +7,7 @@ import { useAccountFilter } from "../contexts/AccountFilterContext";
 import { isTransactionType } from "../utils/sortUtils";
 import ExpenseChart from "../features/charts/ExpenseChart";
 import MonthlyComparisonChart from "../features/charts/MonthlyComparisonChart";
+import EditLaunchModal from "../features/launches/EditLaunchModal";
 import { askAi } from "../services/aiService";
 import { getLaunches as fetchLaunches, type GetTransactionsFilter } from "../services/launchService";
 import type { LaunchRow } from "../features/launches/types";
@@ -21,8 +21,9 @@ export default function DashboardPage() {
   const [aiError, setAiError] = useState("");
   const [isAskingAi, setIsAskingAi] = useState(false);
   const [previousMonthLaunches, setPreviousMonthLaunches] = useState<LaunchRow[]>([]);
-  const { launches } = useLaunches();
-  const { accounts } = useAccounts();
+  const [editingLaunch, setEditingLaunch] = useState<LaunchRow | null>(null);
+  const { launches, reloadLaunches } = useLaunches();
+  const { accounts, reloadAccounts } = useAccounts();
   const { month } = usePeriod();
   const { selectedAccounts } = useAccountFilter();
 
@@ -213,6 +214,18 @@ export default function DashboardPage() {
         Conteúdo do modal aqui
       </Modal>
 
+      {editingLaunch && (
+        <EditLaunchModal
+          launch={editingLaunch}
+          onClose={() => setEditingLaunch(null)}
+          onSave={async () => {
+            await reloadLaunches();
+            await reloadAccounts();
+            setEditingLaunch(null);
+          }}
+        />
+      )}
+
       <div className="dashboard">
         {/* KPI CARDS */}
         <div className="dashboard-kpis">
@@ -268,7 +281,12 @@ export default function DashboardPage() {
 
         <div className="dashboard-charts-grid">
           <Card title="Despesas por categoria">
-            <ExpenseChart launches={dashboardData.filteredLaunches} month={month} maxItems={10} />
+            <ExpenseChart
+              launches={dashboardData.filteredLaunches}
+              month={month}
+              maxItems={10}
+              onLaunchClick={(launch) => setEditingLaunch(launch)}
+            />
           </Card>
 
           <Card>

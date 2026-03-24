@@ -1,0 +1,141 @@
+.expense-chart-shell {
+  position: relative;
+}
+
+.expense-chart-tooltip-anchor {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  z-index: 6;
+}
+
+.expense-chart-tooltip {
+  width: min(520px, calc(100vw - 32px));
+  background: rgba(255, 255, 255, 0.98);
+  border: 1px solid #dbe3ea;
+  border-radius: 16px;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.16);
+  overflow: hidden;
+}
+
+.expense-chart-tooltip-title {
+  padding: 12px 14px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #0f172a;
+  background: linear-gradient(135deg, #eff6ff, #ecfeff);
+  border-bottom: 1px solid #dbe3ea;
+}
+
+.expense-chart-tooltip-table-wrapper {
+  max-height: 280px;
+  overflow: auto;
+}
+
+.expense-chart-tooltip-table {
+  width: 100%;
+  font-size: 0.82rem;
+}
+
+.expense-chart-tooltip-grid {
+  display: grid;
+  grid-template-columns: 92px minmax(160px, 1.4fr) minmax(120px, 1fr) 96px;
+  align-items: start;
+}
+
+.expense-chart-tooltip-head,
+.expense-chart-tooltip-row,
+.expense-chart-tooltip-foot {
+  padding: 10px 12px;
+  border-bottom: 1px solid #eef2f7;
+  column-gap: 12px;
+}
+
+.expense-chart-tooltip-head {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+  color: #475569;
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  z-index: 1;
+}
+
+.expense-chart-tooltip-body {
+  display: flex;
+  flex-direction: column;
+}
+
+.expense-chart-tooltip-row {
+  width: 100%;
+  background: transparent;
+  border-left: none;
+  border-right: none;
+  border-top: none;
+  cursor: pointer;
+  text-align: left;
+  color: #0f172a;
+  font: inherit;
+}
+
+.expense-chart-tooltip-row:hover {
+  background: #f8fafc;
+}
+
+.expense-chart-tooltip-row:focus-visible {
+  outline: 2px solid #0f766e;
+  outline-offset: -2px;
+  background: #ecfeff;
+}
+
+.expense-chart-tooltip-row span,
+.expense-chart-tooltip-head span,
+.expense-chart-tooltip-foot span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.expense-chart-tooltip-foot {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+  border-bottom: none;
+}
+
+.expense-chart-tooltip-total-label {
+  grid-column: 1 / span 3;
+}
+
+.expense-chart-tooltip-value {
+  text-align: right !important;
+  white-space: nowrap;
+}
+
+@media (max-width: 640px) {
+  .expense-chart-tooltip-anchor {
+    left: 8px;
+    right: 8px;
+    top: 8px;
+  }
+
+  .expense-chart-tooltip {
+    width: 100%;
+  }
+
+  .expense-chart-tooltip-table {
+    font-size: 0.76rem;
+  }
+
+  .expense-chart-tooltip-grid {
+    grid-template-columns: 78px minmax(120px, 1.2fr) minmax(96px, 1fr) 84px;
+  }
+
+  .expense-chart-tooltip-head,
+  .expense-chart-tooltip-row,
+  .expense-chart-tooltip-foot {
+    padding: 8px 10px;
+  }
+}

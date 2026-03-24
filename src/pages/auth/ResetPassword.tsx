@@ -61,6 +61,7 @@ export default function ResetPassword() {
 
   return (
     <div className="auth-container">
+      <div className="auth-background" aria-hidden="true" />
       <div className="auth-card">
         <form
           onSubmit={e => {
@@ -69,7 +70,23 @@ export default function ResetPassword() {
           }}
           className="auth-form"
         >
-          <h2>Redefinir senha</h2>
+          <div className="auth-brand">
+            <img
+              src="/financa-facil-logo.svg"
+              alt="Logotipo do Financa Facil"
+              className="auth-brand-logo"
+            />
+            <div className="auth-brand-copy">
+              <span className="auth-brand-kicker">Seu controle financeiro diario</span>
+              <h1 className="auth-title">Financa Facil</h1>
+              <p className="auth-subtitle">Defina uma nova senha para continuar com acesso seguro ao sistema.</p>
+            </div>
+          </div>
+
+          <div className="auth-form-header">
+            <h2 className="auth-form-title">Redefinir senha</h2>
+            <p className="auth-form-description">Escolha uma nova senha e confirme para concluir a recuperacao.</p>
+          </div>
 
           {errorMessage && (
             <p className="auth-feedback auth-feedback-error">{errorMessage}</p>
@@ -101,7 +118,7 @@ export default function ResetPassword() {
             {isSubmitting ? "Salvando..." : "Redefinir senha"}
           </Button>
 
-          <p className="reset-password-footer">
+          <p className="reset-password-footer auth-footer-link">
             Lembrou a senha? <Link to="/login">Voltar para login</Link>
           </p>
         </form>

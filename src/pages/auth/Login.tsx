@@ -43,6 +43,7 @@ export default function Login() {
 
   return (
     <div className="login-container">
+      <div className="login-background" aria-hidden="true" />
       <div className="login-card">
         <form
           onSubmit={e => {
@@ -51,7 +52,23 @@ export default function Login() {
           }}
           className="login-form"
         >
-          <h2 className="login-title">Login</h2>
+          <div className="login-brand">
+            <img
+              src="/financa-facil-logo.svg"
+              alt="Logotipo do Finança Fácil"
+              className="login-brand-logo"
+            />
+            <div className="login-brand-copy">
+              <span className="login-brand-kicker">Seu controle financeiro diário</span>
+              <h1 className="login-title">Finança Fácil</h1>
+              <p className="login-subtitle">Entre para acompanhar receitas, despesas e metas com clareza.</p>
+            </div>
+          </div>
+
+          <div className="login-form-header">
+            <h2 className="login-form-title">Acessar conta</h2>
+          </div>
+
           {message && (
             <div className="auth-message">
               {message}

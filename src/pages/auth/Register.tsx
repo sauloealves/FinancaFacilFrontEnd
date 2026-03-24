@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { register } from "../../services/authService";
 import { getErrorMessage } from "../../services/api";
 import Input from "../../components/ui/Input/Input";
@@ -59,6 +59,7 @@ export default function Register() {
 
   return (
     <div className="auth-container">
+      <div className="auth-background" aria-hidden="true" />
       <div className="auth-card">
         <form
           onSubmit={e => {
@@ -67,7 +68,23 @@ export default function Register() {
           }}
           className="auth-form"
         >
-          <h2>Criar conta</h2>
+          <div className="auth-brand">
+            <img
+              src="/financa-facil-logo.svg"
+              alt="Logotipo do Financa Facil"
+              className="auth-brand-logo"
+            />
+            <div className="auth-brand-copy">
+              <span className="auth-brand-kicker">Seu controle financeiro diario</span>
+              <h1 className="auth-title">Financa Facil</h1>
+              <p className="auth-subtitle">Organize receitas, despesas e contas em um unico lugar.</p>
+            </div>
+          </div>
+
+          <div className="auth-form-header">
+            <h2 className="auth-form-title">Criar conta</h2>
+            <p className="auth-form-description">Comece com uma visao simples e clara da sua rotina financeira.</p>
+          </div>
 
           {errorMessage && (
             <p className="auth-feedback auth-feedback-error">{errorMessage}</p>
@@ -111,6 +128,10 @@ export default function Register() {
           <Button type="submit" disabled={isSubmitting || showSuccess}>
             {isSubmitting ? "Cadastrando..." : "Cadastrar"}
           </Button>
+
+          <p className="auth-footer-link">
+            Ja tem conta? <Link to="/login">Entrar</Link>
+          </p>
         </form>
       </div>
     </div>
