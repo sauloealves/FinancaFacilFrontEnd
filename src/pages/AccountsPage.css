@@ -173,3 +173,90 @@
 .btn-action:active {
   transform: scale(0.97);
 }
+
+@media (max-width: 640px) {
+  .page-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .page-header .btn-primary {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .accounts-section {
+    padding: 14px;
+  }
+
+  .accounts-section-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+  }
+
+  .accounts-table,
+  .accounts-table thead,
+  .accounts-table tbody,
+  .accounts-table tr,
+  .accounts-table th,
+  .accounts-table td {
+    display: block;
+    width: 100%;
+  }
+
+  .accounts-table thead {
+    display: none;
+  }
+
+  .accounts-table tbody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .accounts-table tbody tr {
+    background: var(--white);
+    border: 1px solid var(--gray-200);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 10px 24px rgba(15, 23, 42, 0.05);
+  }
+
+  .accounts-table td {
+    padding: 8px 0;
+    border-bottom: 1px solid var(--gray-100);
+    display: grid;
+    grid-template-columns: minmax(96px, 120px) minmax(0, 1fr);
+    gap: 12px;
+    align-items: start;
+  }
+
+  .accounts-table td:last-child {
+    border-bottom: none;
+    padding-bottom: 0;
+  }
+
+  .accounts-table td::before {
+    content: attr(data-label);
+    color: var(--gray-500);
+    font-size: 0.8rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
+
+  .account-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    justify-content: flex-start;
+  }
+
+  .btn-action {
+    flex: 1 1 calc(50% - 8px);
+    min-height: 40px;
+    justify-content: center;
+    padding: 10px 12px;
+  }
+}

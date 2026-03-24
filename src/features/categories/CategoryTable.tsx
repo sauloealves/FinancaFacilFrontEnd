@@ -45,7 +45,7 @@ export default function CategoryTable({
     // Renderizar a própria categoria
     elements.push(
       <tr key={cat.id}>
-        <td>
+        <td data-label="Nome">
           <div style={{ paddingLeft: `${level * 24}px`, display: "flex", alignItems: "center", gap: "8px" }}>
             {children.length > 0 ? (
               <button
@@ -61,8 +61,8 @@ export default function CategoryTable({
             <span>{cat.name}</span>
           </div>
         </td>
-        <td>{getParentName(cat.parentId)}</td>
-        <td>
+        <td data-label="Categoria Pai">{getParentName(cat.parentId)}</td>
+        <td data-label="Ações">
           <div className="category-actions">
             <button className="btn-action edit" onClick={() => onEdit(cat)}>
               ✏ Editar

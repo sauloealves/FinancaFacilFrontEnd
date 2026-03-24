@@ -312,6 +312,65 @@
   display: none;
 }
 
+@media (max-width: 1180px) and (min-width: 961px) {
+  .header {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "left right"
+      "center center";
+    align-items: start;
+    row-gap: var(--space-3);
+    padding: 12px var(--space-3);
+  }
+
+  .header-left {
+    grid-area: left;
+    min-width: 0;
+  }
+
+  .header-right {
+    grid-area: right;
+    align-self: start;
+  }
+
+  .header-center {
+    grid-area: center;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
+
+  .header-title {
+    font-size: clamp(1.1rem, 2vw, 1.35rem);
+  }
+
+  .month-navigator {
+    width: max-content;
+    min-width: 100%;
+    justify-content: flex-start;
+  }
+
+  .month-display {
+    min-width: 170px;
+  }
+
+  .header-actions-desktop {
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  .header-actions-desktop .btn,
+  .header-actions-desktop .import-transactions-trigger {
+    min-height: 38px;
+    padding: 9px 12px;
+    font-size: 0.95rem;
+  }
+
+  .header-user {
+    margin-left: var(--space-1);
+  }
+}
+
 @media (max-width: 960px) {
   .header {
     grid-template-columns: 1fr auto;

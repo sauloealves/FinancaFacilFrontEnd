@@ -19,6 +19,7 @@ const titles: Record<string, string> = {
 };
 
 export default function AppLayout() {
+  const sidebarDrawerBreakpoint = 1100;
   const location = useLocation();
   const title = titles[location.pathname] ?? "Página Inicial";
   const { month, setMonth } = usePeriod();
@@ -30,7 +31,7 @@ export default function AppLayout() {
   }, [location.pathname]);
 
   function handleToggleSidebar() {
-    if (globalThis.innerWidth <= 960) {
+    if (globalThis.innerWidth <= sidebarDrawerBreakpoint) {
       setIsSidebarOpen((current) => !current);
       return;
     }

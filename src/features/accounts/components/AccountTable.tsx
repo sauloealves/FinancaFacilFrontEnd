@@ -34,15 +34,16 @@ export default function AccountTable({
       <tbody>
         {accounts.map((account) => (
           <tr key={account.id}>
-            <td>{account.name}</td>
+            <td data-label="Nome">{account.name}</td>
 
-            <td>
+            <td data-label="Saldo Inicial">
               {formatBRLInputSigned(
                 account.initialBalance
               )}
             </td>
 
             <td
+              data-label="Saldo Atual"
               className={
                 account.currentBalance < 0
                   ? "negative"
@@ -54,7 +55,7 @@ export default function AccountTable({
               )}
             </td>
 
-            <td>
+            <td data-label="Ações">
               <div className="account-actions">
                 <button
                     className="btn-action edit"
