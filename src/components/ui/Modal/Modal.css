@@ -51,6 +51,18 @@
   font-weight: 600;
 }
 
+.modal-title-revenue {
+  color: #0f5fb8;
+}
+
+.modal-title-expense {
+  color: #c62828;
+}
+
+.modal-title-transfer {
+  color: #5f6368;
+}
+
 .modal-close {
   background: none;
   border: none;

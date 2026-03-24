@@ -31,7 +31,7 @@ export default function Login() {
         password,
       });
 
-      login(response.token);
+      login(response.token, response.user);
 
       navigate(from, { replace: true });
     } catch (err) {

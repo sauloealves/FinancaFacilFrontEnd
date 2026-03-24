@@ -226,6 +226,15 @@
 
 .header-user {
   margin-left: var(--space-2);
+  position: relative;
+  z-index: 1220;
+}
+
+.user-avatar-button {
+  border: none;
+  background: transparent;
+  padding: 0;
+  cursor: pointer;
 }
 
 .user-avatar {
@@ -241,9 +250,65 @@
   font-weight: 600;
 }
 
+.user-menu-backdrop {
+  display: none;
+}
+
+.user-menu {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: 0;
+  min-width: 220px;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
+  padding: 8px;
+}
+
+.user-menu-header {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 10px 12px 12px;
+  border-bottom: 1px solid var(--gray-200);
+  margin-bottom: 6px;
+}
+
+.user-menu-header strong {
+  font-size: var(--font-body);
+  color: var(--gray-900);
+}
+
+.user-menu-header span {
+  font-size: var(--font-label);
+  color: var(--gray-600);
+}
+
+.user-menu-item {
+  width: 100%;
+  min-height: 42px;
+  border: none;
+  background: transparent;
+  border-radius: var(--radius-md);
+  text-align: left;
+  padding: 0 12px;
+  cursor: pointer;
+  color: var(--gray-800);
+}
+
+.user-menu-item:hover {
+  background: var(--gray-100);
+}
+
+.user-menu-item.danger {
+  color: #b42318;
+}
+
 .mobile-actions-backdrop,
 .mobile-actions-panel,
-.mobile-fab {
+.mobile-fab,
+.user-menu-backdrop {
   display: none;
 }
 
@@ -276,9 +341,13 @@
     font-size: clamp(1.05rem, 3vw, 1.25rem);
   }
 
-  .header-actions-desktop,
-  .header-user {
+  .header-actions-desktop {
     display: none;
+  }
+
+  .header-user {
+    display: block;
+    margin-left: 0;
   }
 
   .month-navigator {
@@ -391,5 +460,31 @@
 
   .mobile-fab.open {
     transform: rotate(90deg);
+  }
+
+  .user-menu-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    border: none;
+    padding: 0;
+    margin: 0;
+    background: transparent;
+    opacity: 0;
+    pointer-events: none;
+    z-index: 1215;
+  }
+
+  .user-menu-backdrop.visible {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .user-menu {
+    position: fixed;
+    top: 72px;
+    right: 16px;
+    left: 16px;
+    min-width: 0;
   }
 }

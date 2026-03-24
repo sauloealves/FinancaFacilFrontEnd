@@ -8,6 +8,7 @@ type ModalProps = {
   footer?: React.ReactNode;
   onClose: () => void;
   size?: "sm" | "md" | "lg" | "xl";
+  titleTone?: "default" | "revenue" | "expense" | "transfer";
 };
 
 export default function Modal({
@@ -17,6 +18,7 @@ export default function Modal({
   footer,
   onClose,
   size = "md",
+  titleTone = "default",
 }: Readonly<ModalProps>) {
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
@@ -44,7 +46,7 @@ export default function Modal({
       >
         {/* HEADER */}
         <div className="modal-header">
-          <h3 className="modal-title">{title}</h3>
+          <h3 className={`modal-title modal-title-${titleTone}`}>{title}</h3>
           <button className="modal-close" onClick={onClose}>
             ✕
           </button>

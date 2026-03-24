@@ -1,11 +1,15 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Button from "../../ui/Button/Button";
 import "./Header.css";
 import RevenueModal from "../../../features/revenue/RevenueModal";
 import ExpenseModal from '../../../features/expense/expenseModal';
 import TransferModal from '../../../features/transfer/TransferModal';
 import ImportTransactionsAction from "../../../features/import/ImportTransactionsAction";
+import ProfileSettingsModal from "../../../features/profile/ProfileSettingsModal";
+import ChangePasswordModal from "../../../features/profile/ChangePasswordModal";
 import { formatMonthBR } from "../../../utils/date";
+import { useAuth } from "../../../contexts/auth/AuthContext";
+import { useNavigate } from "react-router-dom";
 
 type HeaderProps = {
   title?: string;
@@ -48,11 +52,17 @@ export default function Header({
   isSidebarCollapsed,
   onToggleSidebar,
 }: Readonly<HeaderProps>) {
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
   const [openRevenue, setOpenRevenue] = useState(false);
   const [openExpense, setOpenExpense] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
+  const userMenuRef = useRef<HTMLDivElement>(null);
   
   const currentYear = month ? Number.parseInt(month.split("-")[0], 10) : new Date().getFullYear();
   const currentMonth = month ? Number.parseInt(month.split("-")[1], 10) : new Date().getMonth() + 1;
@@ -89,6 +99,35 @@ export default function Header({
     setShowMobileActions(false);
     setOpenTransfer(true);
   }
+
+  function handleLogout() {
+    logout();
+    setIsUserMenuOpen(false);
+    navigate("/login", { replace: true });
+  }
+
+  useEffect(() => {
+    function handleOutsideClick(event: MouseEvent) {
+      if (!userMenuRef.current?.contains(event.target as Node)) {
+        setIsUserMenuOpen(false);
+      }
+    }
+
+    if (isUserMenuOpen) {
+      document.addEventListener("mousedown", handleOutsideClick);
+    }
+
+    return () => {
+      document.removeEventListener("mousedown", handleOutsideClick);
+    };
+  }, [isUserMenuOpen]);
+
+  const avatarLabel = user?.name
+    ?.split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((namePart) => namePart.charAt(0).toUpperCase())
+    .join("") || "US";
   
   return (
     <>
@@ -208,11 +247,70 @@ export default function Header({
           onClose={() => setOpenExpense(false)}
         />
 
-        <div className="header-user">
-          <span className="user-avatar">SA</span>
+        <div className="header-user" ref={userMenuRef}>
+          <button
+            type="button"
+            className="user-avatar-button"
+            onClick={() => setIsUserMenuOpen((current) => !current)}
+            aria-expanded={isUserMenuOpen}
+            aria-haspopup="menu"
+            title={user?.name ?? user?.email ?? "Usuário"}
+          >
+            <span className="user-avatar">{avatarLabel}</span>
+          </button>
+
+          {isUserMenuOpen && (
+            <div className="user-menu" role="menu">
+              <div className="user-menu-header">
+                <strong>{user?.name ?? "Usuário"}</strong>
+                <span>{user?.email ?? ""}</span>
+              </div>
+              <button
+                type="button"
+                className="user-menu-item"
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  setIsProfileOpen(true);
+                }}
+              >
+                Editar Perfil
+              </button>
+              <button
+                type="button"
+                className="user-menu-item"
+                onClick={() => {
+                  setIsUserMenuOpen(false);
+                  setIsChangePasswordOpen(true);
+                }}
+              >
+                Trocar Senha
+              </button>
+              <button
+                type="button"
+                className="user-menu-item danger"
+                onClick={handleLogout}
+              >
+                Sair
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </header>
+
+    {isProfileOpen && (
+      <ProfileSettingsModal
+        isOpen={isProfileOpen}
+        onClose={() => setIsProfileOpen(false)}
+      />
+    )}
+
+    {isChangePasswordOpen && (
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
+    )}
 
     <button
       type="button"
@@ -245,6 +343,13 @@ export default function Header({
     >
       {showMobileActions ? "✕" : "+"}
     </button>
+
+    <button
+      type="button"
+      className={`user-menu-backdrop ${isUserMenuOpen ? "visible" : ""}`}
+      onClick={() => setIsUserMenuOpen(false)}
+      aria-label="Fechar menu do usuário"
+    />
     </>
   );
 }

@@ -1,12 +1,26 @@
 import api from "./api";
 
-type AuthPayload = {
-  token: string;
-  user: {
-    id: string;
-    email: string;
+export type AuthUserPayload = {
+  id: string;
+  email: string;
+  name?: string;
+  phone?: string;
+  notificationsEnabled?: boolean;
+  notificationChannels?: {
+    whatsapp?: boolean;
+    email?: boolean;
   };
 };
+
+type AuthPayload = {
+  token: string;
+  user: AuthUserPayload;
+};
+
+const DEFAULT_CHANGE_PASSWORD_ENDPOINT = (
+  (import.meta.env.VITE_CHANGE_PASSWORD_ENDPOINT as string | undefined)?.trim() ||
+  "/auth/change-password"
+).replace(/\/+$/, "");
 
 export async function register(data: {
   name: string;
@@ -33,4 +47,12 @@ export async function forgotPassword(email: string) {
 export async function resetPassword(token: string, newPassword: string) {
   const { data } = await api.post<unknown>("/auth/reset-password", { token, newPassword });
   return data;
+}
+
+export async function changePassword(data: {
+  currentPassword: string;
+  newPassword: string;
+}) {
+  const { data: response } = await api.post<unknown>(DEFAULT_CHANGE_PASSWORD_ENDPOINT, data);
+  return response;
 }

@@ -206,6 +206,7 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
     <Modal
       isOpen={isOpen}
       title="Transferência entre contas"
+      titleTone="transfer"
       onClose={onClose}
       size="lg"
       footer={

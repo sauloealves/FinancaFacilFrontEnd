@@ -237,6 +237,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
     <Modal
       isOpen={isOpen}
       title="Nova Despesa"
+      titleTone="expense"
       onClose={onClose}
       size="lg"
       footer={

@@ -1095,11 +1095,14 @@ export default function ImportTransactionsAction({
                             label={undefined}
                             items={sortedCategories}
                             selectedValue={row.categoryId}
-                            onSelect={(value) =>
-                              row.categoryId
-                                ? updateRegularCategoryForRow(row.id, value)
-                                : updateRegularCategoryMapping(row.originalCategoryName, value, row.id)
-                            }
+                            onSelect={(value) => {
+                              if (row.categoryId || !row.originalCategoryName.trim()) {
+                                updateRegularCategoryForRow(row.id, value);
+                                return;
+                              }
+
+                              updateRegularCategoryMapping(row.originalCategoryName, value, row.id);
+                            }}
                             getLabel={(category) => category.name}
                             getId={(category) => category.id}
                             placeholder={
@@ -1136,11 +1139,16 @@ export default function ImportTransactionsAction({
                                 return;
                               }
 
+                              if (!row.originalFromAccountName.trim()) {
+                                updateAccountForRow(row.id, value, "from");
+                                return;
+                              }
+
                               updateAccountMapping(row.originalFromAccountName, value);
                               return;
                             }
 
-                            if (row.accountId) {
+                            if (row.accountId || !row.originalAccountName.trim()) {
                               updateAccountForRow(row.id, value, "regular");
                               return;
                             }
@@ -1191,11 +1199,14 @@ export default function ImportTransactionsAction({
                             label={undefined}
                             items={sortedAccounts}
                             selectedValue={row.toAccountId}
-                            onSelect={(value) =>
-                              row.toAccountId
-                                ? updateAccountForRow(row.id, value, "to")
-                                : updateAccountMapping(row.originalToAccountName, value)
-                            }
+                            onSelect={(value) => {
+                              if (row.toAccountId || !row.originalToAccountName.trim()) {
+                                updateAccountForRow(row.id, value, "to");
+                                return;
+                              }
+
+                              updateAccountMapping(row.originalToAccountName, value);
+                            }}
                             getLabel={(account) => account.name}
                             getId={(account) => account.id}
                             placeholder={

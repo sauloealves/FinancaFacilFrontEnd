@@ -251,6 +251,7 @@ export default function RevenueModal({
     <Modal
       isOpen={isOpen}
       title="Nova Receita"
+      titleTone="revenue"
       onClose={onClose}
       size="lg"
       footer={

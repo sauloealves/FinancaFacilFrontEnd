@@ -1,4 +1,4 @@
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import { menu } from "../../../app/config/menu";
 import "./Sidebar.css";
 import SidebarAccounts from "../SidebarAccounts/SidebarAccounts";
@@ -17,19 +17,11 @@ const menuIcons: Record<string, string> = {
   "/categories": "#",
 };
 
-export default function Sidebar({
+function Sidebar({
   isOpen,
   isCollapsed,
   onClose,
 }: Readonly<SidebarProps>) {
-  const navigate = useNavigate();
-
-  function logout() {
-    localStorage.removeItem("token");
-    onClose();
-    navigate("/login");
-  }
-
   return (
     <aside className={`sidebar ${isOpen ? "open" : ""} ${isCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-header">
@@ -65,14 +57,6 @@ export default function Sidebar({
             <span className="sidebar-item-label">{item.label}</span>
           </NavLink>
         ))}
-        <button
-          onClick={logout}
-          className="sidebar-item sidebar-logout"
-          title={isCollapsed ? "Sair" : undefined}
-        >
-          <span className="sidebar-item-icon" aria-hidden="true">⇥</span>
-          <span className="sidebar-item-label">Sair</span>
-        </button>
       </nav>   
       <div className="sidebar-divider" />
       <div className="sidebar-accounts">
@@ -82,3 +66,5 @@ export default function Sidebar({
     </aside>
   );
 }
+
+export default Sidebar;
