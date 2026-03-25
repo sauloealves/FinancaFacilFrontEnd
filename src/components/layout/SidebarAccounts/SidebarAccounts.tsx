@@ -29,6 +29,7 @@ export default function SidebarAccounts() {
               type="checkbox"
               checked={isSelected}
               onChange={() => toggleAccount(account.id)}
+              aria-checked={isSelected}
             />
 
             <span className="account-name">

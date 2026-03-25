@@ -33,7 +33,7 @@ export default function LaunchesPage() {
   const { launches, reloadLaunches } = useLaunches();
   const { reloadAccounts } = useAccounts();
 
-  // Carrega o saldo inicial quando o mês ou contas selecionadas mudarem
+  // Recalcula o saldo inicial do mês respeitando as contas selecionadas.
   useEffect(() => {
     const loadBalance = async () => {
       setLoadingBalance(true);
@@ -43,7 +43,7 @@ export default function LaunchesPage() {
         Number(year), 
         Number(monthNum), 
         1,
-        selectedAccounts.length > 0 ? selectedAccounts : undefined
+        selectedAccounts.length > 0 ? selectedAccounts : undefined,
       );
 
       setHistoricalOpeningBalance(balance);

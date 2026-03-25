@@ -611,7 +611,7 @@ export async function getOpeningBalance(
 
     if (accountIds && accountIds.length > 0) {
       for (const accountId of accountIds) {
-        params.append("accountIds", accountId);
+        params.append("accountId", accountId);
       }
     }
 

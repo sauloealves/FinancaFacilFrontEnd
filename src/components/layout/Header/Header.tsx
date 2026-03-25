@@ -100,7 +100,29 @@ export default function Header({
     setOpenTransfer(true);
   }
 
+  function handleToggleUserMenu() {
+    setShowMobileActions(false);
+    setShowMonthPicker(false);
+    setIsUserMenuOpen((current) => !current);
+  }
+
+  function handleOpenProfile() {
+    setShowMobileActions(false);
+    setShowMonthPicker(false);
+    setIsUserMenuOpen(false);
+    setIsProfileOpen(true);
+  }
+
+  function handleOpenChangePassword() {
+    setShowMobileActions(false);
+    setShowMonthPicker(false);
+    setIsUserMenuOpen(false);
+    setIsChangePasswordOpen(true);
+  }
+
   function handleLogout() {
+    setShowMobileActions(false);
+    setShowMonthPicker(false);
     logout();
     setIsUserMenuOpen(false);
     navigate("/login", { replace: true });
@@ -131,7 +153,7 @@ export default function Header({
   
   return (
     <>
-    <header className="header">
+    <header className={`header ${isUserMenuOpen || showMonthPicker ? "header-floating-open" : ""}`}>
       <div className="header-left">
         <button
           type="button"
@@ -251,7 +273,7 @@ export default function Header({
           <button
             type="button"
             className="user-avatar-button"
-            onClick={() => setIsUserMenuOpen((current) => !current)}
+            onClick={handleToggleUserMenu}
             aria-expanded={isUserMenuOpen}
             aria-haspopup="menu"
             title={user?.name ?? user?.email ?? "Usuário"}
@@ -268,20 +290,14 @@ export default function Header({
               <button
                 type="button"
                 className="user-menu-item"
-                onClick={() => {
-                  setIsUserMenuOpen(false);
-                  setIsProfileOpen(true);
-                }}
+                onClick={handleOpenProfile}
               >
                 Editar Perfil
               </button>
               <button
                 type="button"
                 className="user-menu-item"
-                onClick={() => {
-                  setIsUserMenuOpen(false);
-                  setIsChangePasswordOpen(true);
-                }}
+                onClick={handleOpenChangePassword}
               >
                 Trocar Senha
               </button>

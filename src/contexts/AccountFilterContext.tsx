@@ -19,16 +19,14 @@ export function AccountFilterProvider({
     useState<string[]>([]);
 
   function toggleAccount(accountId: string) {
-    setSelectedAccounts(prev =>
-      prev.includes(accountId)
-        ? prev.filter(id => id !== accountId)
-        : [...prev, accountId]
+    setSelectedAccounts((prev) =>
+      prev[0] === accountId ? [] : [accountId]
     );
   }
 
   function pruneSelectedAccounts(validIds: string[]) {
     setSelectedAccounts((prev) => {
-      const next = prev.filter((id) => validIds.includes(id));
+      const next = prev.filter((id) => validIds.includes(id)).slice(0, 1);
       return next.length === prev.length ? prev : next;
     });
   }

@@ -43,17 +43,13 @@ export function normalizeLaunches({
   launches,
   selectedAccounts = [],
 }: NormalizeInput): LaunchTableData {
-  // 1️⃣ Filtra apenas o mês
   const monthLaunches = launches.filter(l =>
     l.date.startsWith(month)
   );
 
-  // 2️⃣ Ordena por data
   monthLaunches.sort((a, b) => a.date.localeCompare(b.date));
 
-  // 3️⃣ Agrupa por dia
   const byDay = new Map<string, LaunchRow[]>();
-  console.log(byDay);
   for (const launch of monthLaunches) {
     if (!byDay.has(launch.date)) {
       byDay.set(launch.date, []);
@@ -61,7 +57,6 @@ export function normalizeLaunches({
     byDay.get(launch.date)!.push(launch);
   }
 
-  // 4️⃣ Calcula saldo acumulado
   let runningBalance = openingBalance;
   const days: DayGroup[] = [];
 

@@ -11,6 +11,10 @@
   z-index: 20;
 }
 
+.header.header-floating-open {
+  z-index: 1230;
+}
+
 .header-left {
   display: flex;
   align-items: center;
@@ -264,6 +268,7 @@
   background: var(--white);
   box-shadow: 0 20px 40px rgba(15, 23, 42, 0.16);
   padding: 8px;
+  z-index: 1225;
 }
 
 .user-menu-header {
@@ -545,5 +550,6 @@
     right: 16px;
     left: 16px;
     min-width: 0;
+    z-index: 1225;
   }
 }
