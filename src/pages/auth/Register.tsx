@@ -11,6 +11,7 @@ export default function Register() {
   const [form, setForm] = useState({
     name: "",
     email: "",
+    phone: "",
     password: ""
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -43,11 +44,21 @@ export default function Register() {
   }, [navigate, showSuccess]);
 
   async function handleSubmit() {
+    if (!form.phone.trim()) {
+      setErrorMessage("Informe seu telefone para concluir o cadastro.");
+      return;
+    }
+
     setIsSubmitting(true);
     setErrorMessage("");
 
     try {
-      await register(form);
+      await register({
+        ...form,
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim(),
+      });
       setShowSuccess(true);
       setCountdown(5);
     } catch (error) {
@@ -111,6 +122,17 @@ export default function Register() {
             value={form.email}
             onChange={e =>
               setForm({ ...form, email: e.target.value })
+            }
+            disabled={isSubmitting || showSuccess}
+          />
+
+          <Input
+            label="Telefone"
+            type="tel"
+            value={form.phone}
+            placeholder="(00) 00000-0000"
+            onChange={e =>
+              setForm({ ...form, phone: e.target.value })
             }
             disabled={isSubmitting || showSuccess}
           />

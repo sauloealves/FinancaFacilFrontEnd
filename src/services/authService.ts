@@ -25,6 +25,7 @@ const DEFAULT_CHANGE_PASSWORD_ENDPOINT = (
 export async function register(data: {
   name: string;
   email: string;
+  phone: string;
   password: string;
 }) {
   const { data: response } = await api.post<AuthPayload>("/auth/register", data);

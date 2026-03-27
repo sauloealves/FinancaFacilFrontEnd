@@ -5,10 +5,12 @@ import RevenueModal from "../../../features/revenue/RevenueModal";
 import ExpenseModal from '../../../features/expense/expenseModal';
 import TransferModal from '../../../features/transfer/TransferModal';
 import ImportTransactionsAction from "../../../features/import/ImportTransactionsAction";
+import FailedTransactionsModal from "../../../features/launches/FailedTransactionsModal";
 import ProfileSettingsModal from "../../../features/profile/ProfileSettingsModal";
 import ChangePasswordModal from "../../../features/profile/ChangePasswordModal";
 import { formatMonthBR } from "../../../utils/date";
 import { useAuth } from "../../../contexts/auth/AuthContext";
+import { useLaunches } from "../../../contexts/launches/useLaunches";
 import { useNavigate } from "react-router-dom";
 
 type HeaderProps = {
@@ -54,15 +56,18 @@ export default function Header({
 }: Readonly<HeaderProps>) {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { failedTransactions } = useLaunches();
   const [openRevenue, setOpenRevenue] = useState(false);
   const [openExpense, setOpenExpense] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
+  const [isFailedTransactionsOpen, setIsFailedTransactionsOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [showMonthPicker, setShowMonthPicker] = useState(false);
   const [showMobileActions, setShowMobileActions] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
+  const pendingFailedTransactionsCount = failedTransactions.length;
   
   const currentYear = month ? Number.parseInt(month.split("-")[0], 10) : new Date().getFullYear();
   const currentMonth = month ? Number.parseInt(month.split("-")[1], 10) : new Date().getMonth() + 1;
@@ -111,6 +116,13 @@ export default function Header({
     setShowMonthPicker(false);
     setIsUserMenuOpen(false);
     setIsProfileOpen(true);
+  }
+
+  function handleOpenFailedTransactions() {
+    setShowMobileActions(false);
+    setShowMonthPicker(false);
+    setIsUserMenuOpen(false);
+    setIsFailedTransactionsOpen(true);
   }
 
   function handleOpenChangePassword() {
@@ -278,7 +290,14 @@ export default function Header({
             aria-haspopup="menu"
             title={user?.name ?? user?.email ?? "Usuário"}
           >
-            <span className="user-avatar">{avatarLabel}</span>
+            <span className="user-avatar-shell">
+              <span className="user-avatar">{avatarLabel}</span>
+              {pendingFailedTransactionsCount > 0 && (
+                <span className="user-notification-badge">
+                  {pendingFailedTransactionsCount > 99 ? "99+" : pendingFailedTransactionsCount}
+                </span>
+              )}
+            </span>
           </button>
 
           {isUserMenuOpen && (
@@ -287,6 +306,16 @@ export default function Header({
                 <strong>{user?.name ?? "Usuário"}</strong>
                 <span>{user?.email ?? ""}</span>
               </div>
+              <button
+                type="button"
+                className="user-menu-item user-menu-item-with-badge"
+                onClick={handleOpenFailedTransactions}
+              >
+                <span>Lançamentos pendentes</span>
+                {pendingFailedTransactionsCount > 0 && (
+                  <span className="user-menu-count-badge">{pendingFailedTransactionsCount}</span>
+                )}
+              </button>
               <button
                 type="button"
                 className="user-menu-item"
@@ -327,6 +356,11 @@ export default function Header({
         onClose={() => setIsChangePasswordOpen(false)}
       />
     )}
+
+    <FailedTransactionsModal
+      isOpen={isFailedTransactionsOpen}
+      onClose={() => setIsFailedTransactionsOpen(false)}
+    />
 
     <button
       type="button"

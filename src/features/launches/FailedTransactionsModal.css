@@ -1,0 +1,305 @@
+.failed-transactions-panel {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+}
+
+.failed-transactions-summary {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: var(--radius-lg);
+  background: #fff5f5;
+  color: #991b1b;
+}
+
+.failed-transactions-summary strong {
+  min-width: 32px;
+  height: 32px;
+  border-radius: 999px;
+  background: #dc2626;
+  color: var(--white);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.failed-transactions-empty-state {
+  padding: 32px 20px;
+  border: 1px dashed var(--gray-300);
+  border-radius: var(--radius-lg);
+  text-align: center;
+  color: var(--gray-700);
+}
+
+.failed-transactions-empty-state h4 {
+  margin: 0 0 8px;
+  color: var(--gray-900);
+}
+
+.failed-transactions-empty-state p {
+  margin: 0;
+}
+
+.failed-transactions-table-wrapper {
+  overflow-x: auto;
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+}
+
+.failed-transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 820px;
+}
+
+.failed-transactions-table th,
+.failed-transactions-table td {
+  padding: 14px 16px;
+  text-align: left;
+  border-bottom: 1px solid var(--gray-200);
+  vertical-align: top;
+}
+
+.failed-transactions-table th {
+  font-size: var(--font-label);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--gray-500);
+  background: var(--gray-100);
+}
+
+.failed-transactions-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.failed-transactions-message-cell {
+  max-width: 360px;
+  color: var(--gray-900);
+  line-height: 1.45;
+}
+
+.failed-transaction-type-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 78px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  font-size: var(--font-label);
+  font-weight: 600;
+}
+
+.failed-transaction-type-pill.expense {
+  background: rgba(220, 38, 38, 0.12);
+  color: #7f1d1d;
+}
+
+.failed-transaction-type-pill.income {
+  background: rgba(22, 163, 74, 0.12);
+  color: #14532d;
+}
+
+.failed-transactions-action {
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--primary-600);
+  color: var(--white);
+  padding: 10px 14px;
+  font-size: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.failed-transactions-action:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.failed-transactions-action-secondary {
+  background: #fee2e2;
+  color: #b91c1c;
+}
+
+.failed-transactions-actions-cell {
+  white-space: nowrap;
+}
+
+.failed-transactions-actions-cell > .failed-transactions-action + .failed-transactions-action {
+  margin-left: 8px;
+}
+
+.failed-transactions-mobile-list {
+  display: none;
+}
+
+.failed-transactions-mobile-card {
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.failed-transactions-mobile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.failed-transactions-mobile-card p {
+  margin: 0;
+  color: var(--gray-900);
+  line-height: 1.5;
+}
+
+.failed-transactions-mobile-card dl {
+  margin: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.failed-transactions-mobile-card dl div {
+  display: grid;
+  gap: 2px;
+}
+
+.failed-transactions-mobile-card dt {
+  font-size: var(--font-label);
+  color: var(--gray-500);
+}
+
+.failed-transactions-mobile-card dd {
+  margin: 0;
+  color: var(--gray-800);
+}
+
+.failed-transactions-mobile-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.failed-transactions-error-banner {
+  padding: 12px 14px;
+  border: 1px solid #fecaca;
+  border-radius: var(--radius-md);
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.failed-transaction-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.failed-transaction-tags {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.failed-transaction-tag {
+  border: none;
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: var(--font-body);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.failed-transaction-tag.expense {
+  background: rgba(220, 38, 38, 0.12);
+  color: #7f1d1d;
+}
+
+.failed-transaction-tag.income {
+  background: rgba(22, 163, 74, 0.12);
+  color: #14532d;
+}
+
+.failed-transaction-tag.active {
+  box-shadow: inset 0 0 0 2px currentColor;
+}
+
+.failed-transaction-source-card {
+  padding: 16px;
+  border-radius: var(--radius-lg);
+  background: var(--gray-100);
+}
+
+.failed-transaction-source-card p {
+  margin: 6px 0 0;
+  color: var(--gray-900);
+  line-height: 1.5;
+}
+
+.failed-transaction-source-label {
+  font-size: var(--font-label);
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.failed-transaction-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.failed-transaction-form-grid > .input-group {
+  min-width: 0;
+}
+
+.failed-transaction-inline-action {
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+  min-width: 0;
+}
+
+.failed-transaction-inline-action .searchable-select-container {
+  flex: 1;
+  min-width: 0;
+}
+
+.failed-transaction-add-button {
+  min-width: 40px;
+  height: 40px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  color: var(--gray-900);
+  cursor: pointer;
+}
+
+@media (max-width: 768px) {
+  .failed-transactions-table-wrapper {
+    display: none;
+  }
+
+  .failed-transactions-mobile-list {
+    display: grid;
+    gap: 12px;
+  }
+
+  .failed-transactions-summary {
+    align-items: flex-start;
+  }
+
+  .failed-transaction-form-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .failed-transactions-action {
+    width: 100%;
+  }
+
+  .failed-transactions-mobile-actions {
+    grid-template-columns: 1fr;
+  }
+}

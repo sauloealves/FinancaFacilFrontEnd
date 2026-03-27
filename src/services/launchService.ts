@@ -1,6 +1,9 @@
 import axios from "axios";
 import api, { getErrorMessage } from "./api";
+import { normalizeDateFromBackend } from "../utils/date";
 import type {
+  FailedTransactionRow,
+  FailedTransactionType,
   LaunchRow,
   LaunchType,
   OccurrenceType,
@@ -83,6 +86,18 @@ type RawLaunchApiItem = {
   toAccountId?: string;
 };
 
+type RawFailedTransactionApiItem = {
+  id?: string;
+  rawMessage?: string;
+  description?: string;
+  date?: string;
+  accountId?: string;
+  categoryId?: string;
+  amount?: number;
+  value?: number;
+  type?: number | string;
+};
+
 export type BatchCreateTransactionItem = {
   clientId: string;
   payload: CreateTransactionPayload;
@@ -103,12 +118,23 @@ const DEFAULT_TRANSACTIONS_BATCH_ENDPOINT = (
   "/transactions/batch"
 ).replace(/\/+$/, "");
 
+const DEFAULT_FAILED_TRANSACTIONS_ENDPOINT = (
+  (import.meta.env.VITE_FAILED_TRANSACTIONS_ENDPOINT as string | undefined)?.trim() ||
+  "/failed-transactions"
+).replace(/\/+$/, "");
+
 const MAX_BATCH_ITEMS = 250;
 const MAX_BATCH_PAYLOAD_BYTES = 900 * 1024;
 
 function buildFallbackLaunchId(): string {
   const generatedId = globalThis.crypto?.randomUUID?.();
   return generatedId ?? `tmp-${Date.now()}`;
+}
+
+function getLocalTodayDate(): string {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 10);
 }
 
 function normalizeLaunchType(type?: string): LaunchType {
@@ -125,6 +151,29 @@ function normalizeOccurrenceType(type?: string): OccurrenceType {
   }
 
   return "single";
+}
+
+function normalizeFailedTransactionType(
+  type: number | string | undefined,
+  rawMessage?: string,
+): FailedTransactionType {
+  if (type === "income" || type === "expense") {
+    return type;
+  }
+
+  if (type === 0 || type === "0") {
+    return "income";
+  }
+
+  if (type === 1 || type === "1") {
+    return "expense";
+  }
+
+  if ((rawMessage ?? "").toLowerCase().includes("receita")) {
+    return "income";
+  }
+
+  return "expense";
 }
 
 function toTransferLaunch(
@@ -378,6 +427,20 @@ export async function getLaunches(
   return detectAndConvertTransfers(normalized, data);
 }
 
+export async function getFailedTransactions(): Promise<FailedTransactionRow[]> {
+  const { data } = await api.get<RawFailedTransactionApiItem[]>(DEFAULT_FAILED_TRANSACTIONS_ENDPOINT);
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.map((item) => normalizeFailedTransactionFromAPI(item));
+}
+
+export async function completeFailedTransaction(id: string): Promise<void> {
+  await api.put(`${DEFAULT_FAILED_TRANSACTIONS_ENDPOINT}/${id}`);
+}
+
 /**
  * Detecta pares de transferências (mesmo occurrenceGroupId) e as converte em registros únicos
  * Se há um Income e um Expense com o mesmo occurrenceGroupId (tipo Single),
@@ -459,6 +522,23 @@ function normalizeLaunchFromAPI(item: RawLaunchApiItem | null | undefined): Laun
       `Erro ao processar lançamento: ${err instanceof Error ? err.message : "Unknown error"}`,
     );
   }
+}
+
+function normalizeFailedTransactionFromAPI(
+  item: RawFailedTransactionApiItem | null | undefined,
+): FailedTransactionRow {
+  const rawMessage = item?.rawMessage?.trim() ?? "";
+
+  return {
+    id: item?.id ?? buildFallbackLaunchId(),
+    rawMessage,
+    description: item?.description?.trim() || rawMessage,
+    date: item?.date ? normalizeDateFromBackend(item.date) : getLocalTodayDate(),
+    type: normalizeFailedTransactionType(item?.type, rawMessage),
+    value: item?.amount ?? item?.value ?? 0,
+    account: item?.accountId ? { id: item.accountId } : undefined,
+    category: item?.categoryId ? { id: item.categoryId } : undefined,
+  };
 }
 
 function buildLaunchFromPayload(

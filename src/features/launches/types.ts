@@ -1,5 +1,6 @@
 export type LaunchType = "income" | "expense" | "transfer";
 export type OccurrenceType = "single" | "installment" | "recurring";
+export type FailedTransactionType = Extract<LaunchType, "income" | "expense">;
 
 export type AccountRef = {
   id: string;
@@ -28,6 +29,17 @@ export type LaunchRow = {
 
   occurrenceType?: OccurrenceType;
   groupId?: string;
+};
+
+export type FailedTransactionRow = {
+  id: string;
+  rawMessage: string;
+  description: string;
+  date: string;
+  type: FailedTransactionType;
+  value: number;
+  account?: AccountRef;
+  category?: CategoryRef;
 };
 
 export type DayGroup = {

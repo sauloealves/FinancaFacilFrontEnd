@@ -1,8 +1,15 @@
 import { useMemo, useEffect, useState } from "react";
 import { LaunchesContext } from "./LaunchesContext";
 import { usePeriod } from "../usePeriodo";
-import type { LaunchRow } from "../../features/launches/types";
-import { getLaunches as fetchLaunches, type GetTransactionsFilter } from "../../services/launchService";
+import type {
+  FailedTransactionRow,
+  LaunchRow,
+} from "../../features/launches/types";
+import {
+  getFailedTransactions as fetchFailedTransactions,
+  getLaunches as fetchLaunches,
+  type GetTransactionsFilter,
+} from "../../services/launchService";
 import { normalizeDateFromBackend } from "../../utils/date";
 import { useAccounts } from "../accounts/useAccounts";
 import { useCategories } from "../categories/useCategories";
@@ -12,6 +19,7 @@ export function LaunchesProvider({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const [failedTransactions, setFailedTransactions] = useState<FailedTransactionRow[]>([]);
   const [launches, setLaunches] = useState<LaunchRow[]>([]);
   const { month } = usePeriod();
   const { accounts } = useAccounts();
@@ -65,6 +73,25 @@ export function LaunchesProvider({
     return data.map(enrichLaunch);
   };
 
+  const enrichFailedTransaction = (
+    failedTransaction: FailedTransactionRow,
+  ): FailedTransactionRow => {
+    const accountFinder = (id: string) => accounts.find((account) => account.id === id);
+    const categoryFinder = (id: string) => categories.find((category) => category.id === id);
+
+    return {
+      ...failedTransaction,
+      account: fillReference(failedTransaction.account, accountFinder),
+      category: fillReference(failedTransaction.category, categoryFinder),
+    };
+  };
+
+  const normalizeFailedTransactionsData = (
+    data: FailedTransactionRow[],
+  ): FailedTransactionRow[] => {
+    return data.map(enrichFailedTransaction);
+  };
+
   const reloadLaunches = async () => {
     try {
       const { startDate, endDate } = getDateRangeFromMonth(month);
@@ -74,6 +101,16 @@ export function LaunchesProvider({
     } catch (err) {
       console.error(err);
       setLaunches([]);
+    }
+  };
+
+  const reloadFailedTransactions = async () => {
+    try {
+      const data = await fetchFailedTransactions();
+      setFailedTransactions(normalizeFailedTransactionsData(data || []));
+    } catch (err) {
+      console.error(err);
+      setFailedTransactions([]);
     }
   };
 
@@ -94,6 +131,22 @@ export function LaunchesProvider({
 
     loadLaunches();
 
+    const loadFailedTransactions = async () => {
+      try {
+        const data = await fetchFailedTransactions();
+        if (mounted) {
+          setFailedTransactions(normalizeFailedTransactionsData(data || []));
+        }
+      } catch (err) {
+        console.error(err);
+        if (mounted) {
+          setFailedTransactions([]);
+        }
+      }
+    };
+
+    loadFailedTransactions();
+
     return () => {
       mounted = false;
     };
@@ -107,9 +160,20 @@ export function LaunchesProvider({
     );
   }
 
+  function removeFailedTransaction(id: string) {
+    setFailedTransactions((current) => current.filter((item) => item.id !== id));
+  }
+
   const value = useMemo(
-    () => ({ launches, updateLaunch, reloadLaunches }),
-    [launches]
+    () => ({
+      failedTransactions,
+      launches,
+      removeFailedTransaction,
+      reloadFailedTransactions,
+      updateLaunch,
+      reloadLaunches,
+    }),
+    [failedTransactions, launches]
   );
 
   return (
