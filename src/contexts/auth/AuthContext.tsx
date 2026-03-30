@@ -107,12 +107,13 @@ function mergeUserProfile(incomingUser?: AuthUserPayload, currentUser?: AuthUser
 
     const email = incomingUser?.email ?? currentUser?.email ?? "";
     const name = incomingUser?.name ?? currentUser?.name ?? getFallbackName(email);
+    const phone = incomingUser?.phoneNumber ?? incomingUser?.phone ?? currentUser?.phone ?? "";
 
     return {
         id: incomingUser?.id ?? currentUser?.id ?? "",
         email,
         name,
-        phone: incomingUser?.phone ?? currentUser?.phone ?? "",
+        phone,
         notificationsEnabled: incomingUser?.notificationsEnabled ?? currentUser?.notificationsEnabled ?? false,
         notificationChannels: {
             whatsapp: incomingUser?.notificationChannels?.whatsapp ?? currentUser?.notificationChannels.whatsapp ?? false,

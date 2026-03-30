@@ -5,6 +5,7 @@ export type AuthUserPayload = {
   email: string;
   name?: string;
   phone?: string;
+  phoneNumber?: string;
   notificationsEnabled?: boolean;
   notificationChannels?: {
     whatsapp?: boolean;
@@ -25,7 +26,7 @@ const DEFAULT_CHANGE_PASSWORD_ENDPOINT = (
 export async function register(data: {
   name: string;
   email: string;
-  phone: string;
+  phoneNumber: string;
   password: string;
 }) {
   const { data: response } = await api.post<AuthPayload>("/auth/register", data);
