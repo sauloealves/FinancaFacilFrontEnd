@@ -17,7 +17,7 @@
 
 .btn-primary {
   background-color: var(--primary-600);
-  color: var(--white);
+  color: var(--text-inverse);
 }
 
 .btn-primary:hover {
@@ -31,7 +31,7 @@
 
 .btn-danger {
   background-color: var(--danger);
-  color: var(--white);
+  color: var(--text-inverse);
 }
 
 /* States */

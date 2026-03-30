@@ -11,7 +11,18 @@ import ChangePasswordModal from "../../../features/profile/ChangePasswordModal";
 import { formatMonthBR } from "../../../utils/date";
 import { useAuth } from "../../../contexts/auth/AuthContext";
 import { useLaunches } from "../../../contexts/launches/useLaunches";
+import { useTheme } from "../../../contexts/theme/useTheme";
 import { useNavigate } from "react-router-dom";
+
+const themeToggleLabels = {
+  dark: "Ativar tema claro",
+  light: "Ativar tema escuro",
+} as const;
+
+const themeToggleIcons = {
+  dark: "☀",
+  light: "☾",
+} as const;
 
 type HeaderProps = {
   title?: string;
@@ -57,6 +68,7 @@ export default function Header({
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { failedTransactions } = useLaunches();
+  const { theme, toggleTheme } = useTheme();
   const [openRevenue, setOpenRevenue] = useState(false);
   const [openExpense, setOpenExpense] = useState(false);
   const [openTransfer, setOpenTransfer] = useState(false);
@@ -76,6 +88,8 @@ export default function Header({
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
     "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"
   ];
+  const themeToggleLabel = themeToggleLabels[theme];
+  const themeToggleIcon = themeToggleIcons[theme];
   
   const handleMonthSelect = (selectedMonth: number) => {
     if (onMonthChange) {
@@ -259,6 +273,18 @@ export default function Header({
       )}
 
       <div className="header-right">
+        <button
+          type="button"
+          className="theme-toggle"
+          onClick={toggleTheme}
+          aria-label={themeToggleLabel}
+          title={themeToggleLabel}
+        >
+          <span aria-hidden="true" className="theme-toggle-icon">
+            {themeToggleIcon}
+          </span>
+        </button>
+
         <div className="header-actions-desktop">
           {showImportAction && <ImportTransactionsAction />}
           <Button onClick={handleOpenRevenue}>+ Receita</Button>

@@ -2,13 +2,22 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background-color: rgba(0, 0, 0, 0.4);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1300;
   padding: 24px;
   box-sizing: border-box;
+  overflow: hidden;
+}
+
+.modal-backdrop {
+  position: absolute;
+  inset: 0;
+  border: none;
+  padding: 0;
+  margin: 0;
+  background-color: var(--overlay-color);
 }
 
 .modal {
@@ -18,8 +27,11 @@
   max-height: 80vh;
   display: flex;
   flex-direction: column;
-  box-shadow: 0 30px 60px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 30px 60px var(--shadow-color-strong);
   animation: modal-enter 0.2s ease;
+  position: relative;
+  margin: 0;
+  border: none;
 }
 
 .modal-sm {
@@ -38,6 +50,13 @@
   max-width: 1200px;
 }
 
+.modal-fullscreen {
+  width: min(100vw - 48px, 1680px);
+  height: min(100vh - 48px, 1040px);
+  max-width: none;
+  max-height: none;
+}
+
 .modal-header {
   padding: var(--space-3) var(--space-4);
   border-bottom: 1px solid var(--gray-200);
@@ -49,6 +68,7 @@
 .modal-title {
   font-size: var(--font-h2);
   font-weight: 600;
+  color: var(--gray-900);
 }
 
 .modal-title-revenue {
@@ -72,11 +92,16 @@
   flex: 0 0 auto;
 }
 
+.modal-close:hover {
+  color: var(--gray-900);
+}
+
 .modal-body {
   padding: var(--space-4);
   overflow-y: auto;
   flex: 1;
   overscroll-behavior: contain;
+  color: var(--gray-900);
 }
 
 .modal-footer {
@@ -113,7 +138,10 @@
   .modal-overlay {
     align-items: flex-end;
     padding: 0;
-    background-color: rgba(15, 23, 42, 0.52);
+  }
+
+  .modal-backdrop {
+    background-color: var(--overlay-color);
   }
 
   .modal {
@@ -121,6 +149,13 @@
     max-height: min(92vh, 100dvh - 12px);
     border-radius: 20px 20px 0 0;
     animation: modal-slide-up 0.22s ease;
+  }
+
+  .modal-fullscreen {
+    width: 100%;
+    height: min(100dvh, 100vh);
+    max-height: min(100dvh, 100vh);
+    border-radius: 20px 20px 0 0;
   }
 
   .modal-header,

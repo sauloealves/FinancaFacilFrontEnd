@@ -7,7 +7,7 @@
   display: block;
   font-size: 14px;
   font-weight: 500;
-  color: #333;
+  color: var(--gray-900);
   margin-bottom: 6px;
 }
 
@@ -20,11 +20,12 @@
 .searchable-select-input {
   width: 100%;
   padding: 8px 32px 8px 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--gray-300);
   border-radius: 6px;
   font-size: 14px;
   font-family: inherit;
-  background: white;
+  background: var(--white);
+  color: var(--gray-900);
   cursor: text;
   transition: border-color 0.2s ease;
 }
@@ -36,8 +37,8 @@
 }
 
 .searchable-select-input:disabled {
-  background: #f3f4f6;
-  color: #999;
+  background: var(--gray-100);
+  color: var(--gray-500);
   cursor: not-allowed;
 }
 
@@ -48,20 +49,20 @@
   border: none;
   padding: 4px 8px;
   cursor: pointer;
-  color: #999;
+  color: var(--gray-500);
   font-size: 16px;
   transition: color 0.2s ease;
 }
 
 .searchable-select-clear:hover {
-  color: #333;
+  color: var(--gray-900);
 }
 
 .searchable-select-arrow {
   position: absolute;
   right: 12px;
   pointer-events: none;
-  color: #999;
+  color: var(--gray-500);
   font-size: 10px;
 }
 
@@ -70,15 +71,15 @@
   top: 100%;
   left: 0;
   right: 0;
-  background: white;
-  border: 1px solid #ddd;
+  background: var(--white);
+  border: 1px solid var(--gray-300);
   border-top: none;
   border-radius: 0 0 6px 6px;
   margin-top: -1px;
   max-height: 240px;
   overflow-y: auto;
   z-index: 100;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 10px 24px var(--shadow-color);
 }
 
 .searchable-select-option {
@@ -89,7 +90,7 @@
 }
 
 .searchable-select-option:hover {
-  background-color: #f3f4f6;
+  background-color: var(--gray-100);
 }
 
 .searchable-select-option.selected {
@@ -99,15 +100,15 @@
 }
 
 .searchable-select-option.disabled {
-  color: #999;
+  color: var(--gray-500);
   cursor: not-allowed;
   padding: 20px 12px;
   text-align: center;
 }
 
 .searchable-select-option.empty-option {
-  border-bottom: 1px solid #eee;
-  color: #666;
+  border-bottom: 1px solid var(--gray-200);
+  color: var(--gray-600);
   font-style: italic;
 }
 
@@ -121,10 +122,10 @@
 }
 
 .searchable-select-dropdown::-webkit-scrollbar-thumb {
-  background: #ddd;
+  background: var(--gray-300);
   border-radius: 3px;
 }
 
 .searchable-select-dropdown::-webkit-scrollbar-thumb:hover {
-  background: #999;
+  background: var(--gray-500);
 }

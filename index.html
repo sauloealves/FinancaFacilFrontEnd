@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/financa-facil-logo.svg" />
@@ -9,6 +9,20 @@
     />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Finança Fácil</title>
+    <script>
+      (function () {
+        var cookieKey = "financa-facil-theme";
+        var match = document.cookie.match(new RegExp("(?:^|; )" + cookieKey + "=([^;]+)"));
+        var theme = match ? decodeURIComponent(match[1]) : "light";
+
+        if (theme !== "light" && theme !== "dark") {
+          theme = "light";
+        }
+
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

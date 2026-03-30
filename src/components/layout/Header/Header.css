@@ -130,7 +130,7 @@
   background: var(--white);
   border: 1px solid var(--gray-300);
   border-radius: var(--radius-lg);
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 10px 30px var(--shadow-color);
   padding: 16px;
   z-index: 1001;
   min-width: 280px;
@@ -221,6 +221,31 @@
   gap: var(--space-2);
 }
 
+.theme-toggle {
+  width: 40px;
+  height: 40px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-md);
+  background: var(--white);
+  color: var(--gray-900);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  cursor: pointer;
+  box-shadow: 0 8px 18px var(--shadow-color);
+}
+
+.theme-toggle:hover {
+  background: var(--gray-100);
+  border-color: var(--primary-600);
+}
+
+.theme-toggle-icon {
+  font-size: 18px;
+  line-height: 1;
+}
+
 .header-actions-desktop {
   display: flex;
   align-items: center;
@@ -251,7 +276,7 @@
   height: 36px;
   border-radius: 50%;
   background-color: var(--primary-600);
-  color: var(--white);
+  color: var(--text-inverse);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -268,7 +293,7 @@
   padding: 0 5px;
   border-radius: 999px;
   background: #dc2626;
-  color: var(--white);
+  color: var(--text-inverse);
   font-size: 10px;
   font-weight: 700;
   display: inline-flex;
@@ -485,7 +510,7 @@
     border: none;
     padding: 0;
     margin: 0;
-    background: rgba(15, 23, 42, 0.28);
+    background: var(--overlay-color);
     opacity: 0;
     pointer-events: none;
     transition: opacity 0.2s ease;
@@ -530,7 +555,7 @@
     justify-content: space-between;
     font-size: var(--font-body);
     font-weight: 600;
-    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.16);
+    box-shadow: 0 18px 36px var(--shadow-color);
     cursor: pointer;
   }
 
@@ -556,12 +581,12 @@
     border: none;
     border-radius: 50%;
     background: linear-gradient(135deg, var(--primary-600), #0f766e);
-    color: var(--white);
+    color: var(--text-inverse);
     align-items: center;
     justify-content: center;
     font-size: 28px;
     line-height: 1;
-    box-shadow: 0 18px 36px rgba(15, 23, 42, 0.24);
+    box-shadow: 0 18px 36px var(--shadow-color-strong);
     cursor: pointer;
     z-index: 1210;
   }

@@ -944,7 +944,8 @@ export default function ImportTransactionsAction({
         isOpen={isPreviewOpen}
         title={fileName ? `Importar lançamentos: ${fileName}` : "Importar lançamentos"}
         onClose={resetState}
-        size="xl"
+        size="fullscreen"
+        className="import-transactions-preview-modal"
         footer={
           <>
             <Button variant="secondary" onClick={resetState} disabled={isBusy}>

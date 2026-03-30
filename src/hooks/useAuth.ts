@@ -1,3 +1,5 @@
+import { hasStoredToken } from "../contexts/auth/authStorage";
+
 export function isAuthenticated(): boolean {
-  return !!localStorage.getItem("token");
+  return hasStoredToken();
 }

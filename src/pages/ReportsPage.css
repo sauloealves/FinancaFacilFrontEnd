@@ -17,7 +17,7 @@
 
 .report-type {
   background: #5f8f1f;
-  color: var(--white);
+  color: var(--text-inverse);
   padding: 8px 12px;
   border-radius: var(--radius-sm);
   font-size: 13px;
@@ -183,6 +183,7 @@
 .category-row {
   font-weight: 600;
   background: #f8fafc;
+  color: var(--gray-900);
 }
 
 .category-toggle {
@@ -209,6 +210,30 @@
   font-size: 11px;
   line-height: 1;
   color: #4c5b6b;
+}
+
+:root[data-theme="dark"] .report-table thead th {
+  background: #182235;
+  border-bottom-color: var(--gray-300);
+  color: #f3f7ff;
+}
+
+:root[data-theme="dark"] .report-table td {
+  border-bottom-color: #243145;
+}
+
+:root[data-theme="dark"] .category-row {
+  background: #142033;
+  color: #f3f7ff;
+}
+
+:root[data-theme="dark"] .category-toggle-icon {
+  border-color: #8fb7ff;
+  color: #cfe0ff;
+}
+
+:root[data-theme="dark"] .subcategory-row td:first-child {
+  color: var(--gray-700);
 }
 
 .subcategory-row td:first-child {

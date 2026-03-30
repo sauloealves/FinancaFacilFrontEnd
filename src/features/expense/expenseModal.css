@@ -10,6 +10,7 @@
   padding: var(--space-3);
   border: 1px solid var(--gray-300);
   border-radius: var(--radius-md);
+  background: var(--white);
   font-size: var(--font-label);
   font-weight: 500;
   color: var(--gray-700);
@@ -36,6 +37,8 @@
   border-radius: var(--radius-md);
   border: 1px solid var(--gray-300);
   font-size: var(--font-body);
+  background: var(--white);
+  color: var(--gray-900);
 }
 
 .expense-select.error {
@@ -47,6 +50,7 @@
   align-items: center;
   gap: 8px;
   font-size: var(--font-body);
+  color: var(--gray-900);
 }
 
 @media (max-width: 768px) {

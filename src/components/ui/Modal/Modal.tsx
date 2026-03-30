@@ -7,8 +7,9 @@ type ModalProps = {
   children: React.ReactNode;
   footer?: React.ReactNode;
   onClose: () => void;
-  size?: "sm" | "md" | "lg" | "xl";
+  size?: "sm" | "md" | "lg" | "xl" | "fullscreen";
   titleTone?: "default" | "revenue" | "expense" | "transfer";
+  className?: string;
 };
 
 export default function Modal({
@@ -19,6 +20,7 @@ export default function Modal({
   onClose,
   size = "md",
   titleTone = "default",
+  className,
 }: Readonly<ModalProps>) {
   useEffect(() => {
     function handleEsc(e: KeyboardEvent) {
@@ -37,12 +39,16 @@ export default function Modal({
   if (!isOpen) return null;
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className={`modal modal-${size}`}
-        onClick={e => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
+    <div className="modal-overlay">
+      <button
+        type="button"
+        className="modal-backdrop"
+        onClick={onClose}
+        aria-label="Fechar modal"
+      />
+      <dialog
+        open
+        className={className ? `modal modal-${size} ${className}` : `modal modal-${size}`}
       >
         {/* HEADER */}
         <div className="modal-header">
@@ -63,7 +69,7 @@ export default function Modal({
             {footer}
           </div>
         )}
-      </div>
+      </dialog>
     </div>
   );
 }

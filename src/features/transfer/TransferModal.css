@@ -10,6 +10,7 @@
   padding: var(--space-3);
   border: 1px solid var(--gray-300);
   border-radius: var(--radius-md);
+  background: var(--white);
   font-size: var(--font-label);
   font-weight: 500;
   color: var(--gray-700);
@@ -29,18 +30,22 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--gray-900);
 }
 
 .checkbox-group {
   display: flex;
   align-items: center;
   gap: 8px;
+  color: var(--gray-900);
 }
 
 .transfer-select {
   padding: 10px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-900);
 }
 
 .transfer-select.error {

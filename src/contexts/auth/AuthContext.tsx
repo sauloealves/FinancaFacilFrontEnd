@@ -9,9 +9,12 @@ import {
 
 import api from "../../services/api";
 import type { AuthUserPayload } from "../../services/authService";
-
-const TOKEN_STORAGE_KEY = "token";
-const USER_STORAGE_KEY = "auth_user";
+import {
+    USER_STORAGE_KEY,
+    clearStoredAuth,
+    getStoredToken,
+    persistToken,
+} from "./authStorage";
 
 type NotificationChannels = {
     whatsapp: boolean;
@@ -124,7 +127,7 @@ export function AuthProvider({
     children: ReactNode;
 }>) {
     const [token, setToken] = useState(
-        localStorage.getItem(TOKEN_STORAGE_KEY)
+        getStoredToken()
     );
     const [user, setUser] = useState<AuthUser | null>(() => {
         const storedUser = getStoredUser();
@@ -132,7 +135,7 @@ export function AuthProvider({
             return storedUser;
         }
 
-        return localStorage.getItem(TOKEN_STORAGE_KEY) ? createDefaultUser() : null;
+        return getStoredToken() ? createDefaultUser() : null;
     });
     const [message, setMessage] = useState<string | null>(
         null
@@ -141,8 +144,8 @@ export function AuthProvider({
     const isAuthenticated = !!token;
 
     function login(newToken: string, incomingUser?: AuthUserPayload) {
-        localStorage.setItem(TOKEN_STORAGE_KEY, newToken);
-        setToken(newToken);
+        persistToken(newToken);
+        setToken(getStoredToken());
         setUser(currentUser => {
             const nextUser = mergeUserProfile(incomingUser, currentUser ?? createDefaultUser());
             persistUser(nextUser);
@@ -152,8 +155,7 @@ export function AuthProvider({
     }
 
     function logout(msg?: string) {
-        localStorage.removeItem(TOKEN_STORAGE_KEY);
-        persistUser(null);
+        clearStoredAuth();
         setToken(null);
         setUser(null);
         if (msg) setMessage(msg);

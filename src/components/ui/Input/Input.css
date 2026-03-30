@@ -4,16 +4,39 @@
   gap: 4px;
 }
 
+.input-group label {
+  color: var(--gray-700);
+}
+
 .input-group input {
   padding: 10px 12px;
   border-radius: var(--radius-md);
   border: 1px solid var(--gray-300);
   font-size: var(--font-body);
+  background: var(--white);
+  color: var(--gray-900);
+}
+
+.input-group input::placeholder {
+  color: var(--gray-500);
 }
 
 .input-group input:focus {
   outline: none;
   border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary-600) 18%, transparent);
+}
+
+.input-group input[type="date"] {
+  color-scheme: var(--date-input-color-scheme, light);
+}
+
+:root[data-theme="dark"] {
+  --date-input-color-scheme: dark;
+}
+
+:root:not([data-theme="dark"]) {
+  --date-input-color-scheme: light;
 }
 
 .input-group input:disabled {

@@ -4,6 +4,7 @@ body {
   line-height: var(--line-body);
   color: var(--gray-900);
   background-color: var(--gray-100);
+  transition: background-color 0.2s ease, color 0.2s ease;
 }
 
 h1 {
@@ -46,7 +47,7 @@ label {
   border-radius: 6px;
   border: none;
   background: #10b981;
-  color: white;
+  color: var(--text-inverse);
   cursor: pointer;
   font-weight: 600;
   height: 32px;
@@ -71,7 +72,7 @@ label {
   padding: 8px 10px;
   border: 1px solid #e5e7eb;
   border-radius: 6px;
-  background: white;
+  background: var(--white);
   font-size: 14px;
   color: var(--gray-900);
   min-height: 36px;
