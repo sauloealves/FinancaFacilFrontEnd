@@ -11,7 +11,7 @@ import { Modal, Input, Button } from "../../components/ui";
 import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
 import "./RevenueModal.css";
 import { sortAccountsAlphabetically, sortCategoriesHierarchically } from "../../utils/sortUtils";
-import { parseBRL } from "../../utils/currency";
+import { maskBRLInput, parseBRL } from "../../utils/currency";
 
 type RevenueModalProps = {
   isOpen: boolean;
@@ -310,7 +310,7 @@ export default function RevenueModal({
           value={form.value}
           error={errors.value}
           onChange={e => {
-            const value = e.target.value;
+            const value = maskBRLInput(e.target.value);
             setForm({ ...form, value: value });
             validateField("value", value);
           }}

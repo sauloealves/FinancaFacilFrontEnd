@@ -11,7 +11,7 @@ import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSel
 import "./expenseModal.css";
 import AccountModal from "../accounts/components/AccountModal";
 import { sortCategoriesHierarchically } from "../../utils/sortUtils";
-import { parseBRL } from "../../utils/currency";
+import { maskBRLInput, parseBRL } from "../../utils/currency";
 
 type ExpenseModalProps = {
   isOpen: boolean;
@@ -293,7 +293,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
           value={form.value}
           error={errors.value}
           onChange={e => {
-            const v = e.target.value;
+            const v = maskBRLInput(e.target.value);
             setForm({ ...form, value: v });
             validateField("value", v);
           }}

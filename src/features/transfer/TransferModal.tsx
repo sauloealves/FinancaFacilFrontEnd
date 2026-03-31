@@ -9,7 +9,7 @@ import AccountModal from "../accounts/components/AccountModal";
 import CategoryModal from "../categories/CategoryModal";
 import { createCategory } from "../../services/categoryService";
 import { createTransaction } from "../../services/launchService";
-import { parseBRL } from "../../utils/currency";
+import { maskBRLInput, parseBRL } from "../../utils/currency";
 import "./TransferModal.css";
 
 type TransferModalProps = {
@@ -256,7 +256,7 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
           value={form.value}
           error={errors.value}
           onChange={e => {
-            const v = e.target.value;
+            const v = maskBRLInput(e.target.value);
             setForm({ ...form, value: v });
           }}
         />

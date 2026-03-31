@@ -14,6 +14,154 @@ import type { LaunchRow } from "../features/launches/types";
 
 import "./Dashboard.css";
 
+type AiResponseBlock =
+  | { key: string; type: "heading"; level: number; content: string }
+  | { key: string; type: "paragraph"; content: string }
+  | { key: string; type: "ordered-list"; items: string[] }
+  | { key: string; type: "unordered-list"; items: string[] };
+
+const HEADING_PATTERN = /^(#{1,6})\s+(.+)$/;
+const ORDERED_LIST_PATTERN = /^\d+\.\s+(.+)$/;
+const UNORDERED_LIST_PATTERN = /^-\s+(.+)$/;
+
+function normalizeAiResponse(rawText: string): string {
+  return rawText
+    .replaceAll("\r\n", "\n")
+    .replaceAll(/([^\n])\s*(#{1,6}\s+)/g, "$1\n\n$2")
+    .replaceAll(/([^\n])\s*(\d+\.\s+)/g, "$1\n$2")
+    .replaceAll(/([^\n])\s*(-\s+)/g, "$1\n$2")
+    .replaceAll(/([^\n])\s*(?=####?\s+)/g, "$1\n\n")
+    .replaceAll(/\n{3,}/g, "\n\n")
+    .trim();
+}
+
+function createAiBlockKey(prefix: string, value: string): string {
+  return `${prefix}-${value}`;
+}
+
+function collectListItems(lines: string[], startIndex: number, pattern: RegExp) {
+  const items: string[] = [];
+  let currentIndex = startIndex;
+
+  while (currentIndex < lines.length) {
+    const currentLine = lines[currentIndex].trim();
+    const match = pattern.exec(currentLine);
+
+    if (!match) {
+      break;
+    }
+
+    items.push(match[1].trim());
+    currentIndex += 1;
+  }
+
+  return { items, nextIndex: currentIndex };
+}
+
+function collectParagraph(lines: string[], startIndex: number) {
+  const paragraphLines: string[] = [];
+  let currentIndex = startIndex;
+
+  while (currentIndex < lines.length) {
+    const currentLine = lines[currentIndex].trim();
+
+    if (
+      !currentLine ||
+      HEADING_PATTERN.test(currentLine) ||
+      ORDERED_LIST_PATTERN.test(currentLine) ||
+      UNORDERED_LIST_PATTERN.test(currentLine)
+    ) {
+      break;
+    }
+
+    paragraphLines.push(currentLine);
+    currentIndex += 1;
+  }
+
+  return {
+    content: paragraphLines.join(" "),
+    nextIndex: currentIndex,
+  };
+}
+
+function parseAiResponse(rawText: string): AiResponseBlock[] {
+  const normalizedText = normalizeAiResponse(rawText);
+
+  if (!normalizedText) {
+    return [];
+  }
+
+  const lines = normalizedText.split("\n");
+  const blocks: AiResponseBlock[] = [];
+  let index = 0;
+
+  while (index < lines.length) {
+    const line = lines[index].trim();
+
+    if (!line) {
+      index += 1;
+      continue;
+    }
+
+    const headingMatch = HEADING_PATTERN.exec(line);
+    if (headingMatch) {
+      blocks.push({
+        key: createAiBlockKey("heading", `${headingMatch[1].length}-${headingMatch[2].trim()}`),
+        type: "heading",
+        level: headingMatch[1].length,
+        content: headingMatch[2].trim(),
+      });
+      index += 1;
+      continue;
+    }
+
+    if (ORDERED_LIST_PATTERN.test(line)) {
+      const { items, nextIndex } = collectListItems(lines, index, ORDERED_LIST_PATTERN);
+
+      blocks.push({
+        key: createAiBlockKey("ordered", items.join("|")),
+        type: "ordered-list",
+        items,
+      });
+      index = nextIndex;
+      continue;
+    }
+
+    if (UNORDERED_LIST_PATTERN.test(line)) {
+      const { items, nextIndex } = collectListItems(lines, index, UNORDERED_LIST_PATTERN);
+
+      blocks.push({
+        key: createAiBlockKey("unordered", items.join("|")),
+        type: "unordered-list",
+        items,
+      });
+      index = nextIndex;
+      continue;
+    }
+
+    const paragraph = collectParagraph(lines, index);
+
+    blocks.push({
+      key: createAiBlockKey("paragraph", paragraph.content),
+      type: "paragraph",
+      content: paragraph.content,
+    });
+    index = paragraph.nextIndex;
+  }
+
+  return blocks;
+}
+
+function renderAiInline(text: string) {
+  return text.split(/(\*\*[^*]+\*\*)/g).filter(Boolean).map((part, index) => {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      return <strong key={`${part}-${index}`}>{part.slice(2, -2)}</strong>;
+    }
+
+    return <span key={`${part}-${index}`}>{part}</span>;
+  });
+}
+
 export default function DashboardPage() {
   const [open, setOpen] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
@@ -26,6 +174,7 @@ export default function DashboardPage() {
   const { accounts, reloadAccounts } = useAccounts();
   const { month } = usePeriod();
   const { selectedAccounts } = useAccountFilter();
+  const aiResponseBlocks = useMemo(() => parseAiResponse(aiResponse), [aiResponse]);
 
   useEffect(() => {
     let mounted = true;
@@ -333,7 +482,47 @@ export default function DashboardPage() {
 
             {aiResponse && (
               <div className="dashboard-ai-response">
-                {aiResponse}
+                {aiResponseBlocks.map((block) => {
+                  if (block.type === "heading") {
+                    const HeadingTag = block.level <= 2 ? "h3" : "h4";
+
+                    return (
+                      <HeadingTag key={block.key} className="dashboard-ai-response-heading">
+                        {renderAiInline(block.content)}
+                      </HeadingTag>
+                    );
+                  }
+
+                  if (block.type === "ordered-list") {
+                    return (
+                      <ol key={block.key} className="dashboard-ai-response-list ordered">
+                        {block.items.map((item, itemIndex) => (
+                          <li key={`ordered-item-${block.key}-${itemIndex}`}>
+                            {renderAiInline(item)}
+                          </li>
+                        ))}
+                      </ol>
+                    );
+                  }
+
+                  if (block.type === "unordered-list") {
+                    return (
+                      <ul key={block.key} className="dashboard-ai-response-list unordered">
+                        {block.items.map((item, itemIndex) => (
+                          <li key={`unordered-item-${block.key}-${itemIndex}`}>
+                            {renderAiInline(item)}
+                          </li>
+                        ))}
+                      </ul>
+                    );
+                  }
+
+                  return (
+                    <p key={block.key} className="dashboard-ai-response-paragraph">
+                      {renderAiInline(block.content)}
+                    </p>
+                  );
+                })}
               </div>
             )}
           </div>
