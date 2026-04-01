@@ -1,4 +1,5 @@
-import { NavLink } from "react-router-dom";
+import { Fragment, useEffect, useState } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import { menu } from "../../../app/config/menu";
 import "./Sidebar.css";
 import SidebarAccounts from "../SidebarAccounts/SidebarAccounts";
@@ -22,6 +23,30 @@ function Sidebar({
   isCollapsed,
   onClose,
 }: Readonly<SidebarProps>) {
+  const location = useLocation();
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    setOpenGroups((current) => {
+      const nextState = { ...current };
+
+      for (const item of menu) {
+        if (item.children && location.pathname.startsWith(item.path)) {
+          nextState[item.path] = true;
+        }
+      }
+
+      return nextState;
+    });
+  }, [location.pathname]);
+
+  function toggleGroup(path: string) {
+    setOpenGroups((current) => ({
+      ...current,
+      [path]: !(current[path] ?? false),
+    }));
+  }
+
   return (
     <aside className={`sidebar ${isOpen ? "open" : ""} ${isCollapsed ? "collapsed" : ""}`}>
       <div className="sidebar-header">
@@ -41,22 +66,68 @@ function Sidebar({
       </div>
 
       <nav className="sidebar-menu">
-        {menu.map(item => (
-          <NavLink
-            key={item.path}
-            to={item.path}
-            title={isCollapsed ? item.label : undefined}
-            onClick={onClose}
-            className={({ isActive }) =>
-              isActive ? "sidebar-item active" : "sidebar-item"
-            }
-          >
-            <span className="sidebar-item-icon" aria-hidden="true">
-              {menuIcons[item.path] ?? "•"}
-            </span>
-            <span className="sidebar-item-label">{item.label}</span>
-          </NavLink>
-        ))}
+        {menu.map((item) => {
+          const isGroup = Boolean(item.children?.length);
+          const isGroupActive = location.pathname.startsWith(item.path);
+          const isGroupOpen = openGroups[item.path] ?? isGroupActive;
+
+          if (!isGroup) {
+            return (
+              <NavLink
+                key={item.path}
+                to={item.path}
+                title={isCollapsed ? item.label : undefined}
+                onClick={onClose}
+                className={({ isActive }) =>
+                  isActive ? "sidebar-item active" : "sidebar-item"
+                }
+              >
+                <span className="sidebar-item-icon" aria-hidden="true">
+                  {menuIcons[item.path] ?? "•"}
+                </span>
+                <span className="sidebar-item-label">{item.label}</span>
+              </NavLink>
+            );
+          }
+
+          return (
+            <Fragment key={item.path}>
+              <button
+                type="button"
+                className={`sidebar-item sidebar-group-toggle ${isGroupActive ? "active" : ""}`}
+                title={isCollapsed ? item.label : undefined}
+                onClick={() => toggleGroup(item.path)}
+                aria-expanded={isGroupOpen}
+              >
+                <span className="sidebar-item-icon" aria-hidden="true">
+                  {menuIcons[item.path] ?? "•"}
+                </span>
+                <span className="sidebar-item-label">{item.label}</span>
+                <span className="sidebar-submenu-arrow" aria-hidden="true">
+                  {isGroupOpen ? "▾" : "▸"}
+                </span>
+              </button>
+
+              {isGroupOpen && (
+                <div className="sidebar-submenu">
+                  {item.children?.map((child) => (
+                    <NavLink
+                      key={child.path}
+                      to={child.path}
+                      onClick={onClose}
+                      className={({ isActive }) =>
+                        isActive ? "sidebar-submenu-item active" : "sidebar-submenu-item"
+                      }
+                    >
+                      <span className="sidebar-submenu-bullet" aria-hidden="true">•</span>
+                      <span className="sidebar-submenu-label">{child.label}</span>
+                    </NavLink>
+                  ))}
+                </div>
+              )}
+            </Fragment>
+          );
+        })}
       </nav>   
       <div className="sidebar-divider" />
       <div className="sidebar-accounts">

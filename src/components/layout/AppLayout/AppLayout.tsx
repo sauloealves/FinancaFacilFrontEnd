@@ -15,6 +15,8 @@ const titles: Record<string, string> = {
   "/accounts": "Contas & Cartões",
   "/budget": "Orçamento",
   "/reports": "Relatórios",
+  "/reports/monthly": "Relatórios",
+  "/reports/comparison": "Relatórios",
   "/launches": "Lançamentos",
 };
 

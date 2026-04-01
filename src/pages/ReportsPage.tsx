@@ -71,6 +71,27 @@ function monthKeyFromDate(date: string): string {
   return date.slice(0, 7);
 }
 
+function stripInstallmentSuffix(text: string): string {
+  return text.replace(/\s*\(\d+\/\d+\)\s*$/u, "").trim();
+}
+
+function toDisplayCamelCase(text: string): string {
+  return text
+    .trim()
+    .toLocaleLowerCase("pt-BR")
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((word) => word.charAt(0).toLocaleUpperCase("pt-BR") + word.slice(1))
+    .join(" ");
+}
+
+function normalizeReportLabel(text: string, fallback: string): string {
+  const strippedText = stripInstallmentSuffix(text);
+  const normalizedText = toDisplayCamelCase(strippedText);
+
+  return normalizedText || fallback;
+}
+
 function normalizeStartDate(date: string): string {
   return `${date.slice(0, 7)}-01`;
 }
@@ -247,8 +268,8 @@ export default function ReportsPage() {
             id: launch.id,
             date: launch.date,
             type: launch.type as ReportType,
-            category: launch.category?.name ?? "Sem categoria",
-            subcategory: launch.description || "Sem sub-categoria",
+            category: normalizeReportLabel(launch.category?.name ?? "", "Sem Categoria"),
+            subcategory: normalizeReportLabel(launch.description ?? "", "Sem Subcategoria"),
             amount: Math.abs(launch.value),
           }));
 
