@@ -15,6 +15,8 @@ import { CategoriesProvider } from '../contexts/categories/CategoriesProvider';
 import CategoriesPage from "../pages/CategoriesPage";
 import ReportsPage from "../pages/ReportsPage";
 import ReportComparisonPage from "../pages/ReportComparisonPage";
+import BudgetsPage from "../pages/BudgetsPage";
+import BudgetDetailPage from "../pages/BudgetDetailPage";
 
 export default function AppRouter() {
   return (
@@ -41,6 +43,8 @@ export default function AppRouter() {
           <Route path="/dashboard" element={<DashboardPage />} />
           <Route path="/launches" element={<LaunchesPage />} />
           <Route path="/accounts" element={<AccountsPage />} />
+          <Route path="/budgets" element={<BudgetsPage />} />
+          <Route path="/budgets/:budgetId" element={<BudgetDetailPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/reports" element={<Navigate to="/reports/monthly" replace />} />
           <Route path="/reports/monthly" element={<ReportsPage />} />

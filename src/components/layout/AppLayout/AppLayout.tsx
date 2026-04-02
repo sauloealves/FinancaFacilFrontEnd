@@ -14,16 +14,25 @@ const titles: Record<string, string> = {
   "/commitments": "Compromissos",
   "/accounts": "Contas & Cartões",
   "/budget": "Orçamento",
+  "/budgets": "Orçamentos",
   "/reports": "Relatórios",
   "/reports/monthly": "Relatórios",
   "/reports/comparison": "Relatórios",
   "/launches": "Lançamentos",
 };
 
+function getPageTitle(pathname: string): string {
+  if (pathname.startsWith("/budgets/")) {
+    return "Orçamentos";
+  }
+
+  return titles[pathname] ?? "Página Inicial";
+}
+
 export default function AppLayout() {
   const sidebarDrawerBreakpoint = 1100;
   const location = useLocation();
-  const title = titles[location.pathname] ?? "Página Inicial";
+  const title = getPageTitle(location.pathname);
   const { month, setMonth } = usePeriod();
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);

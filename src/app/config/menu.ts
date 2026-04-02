@@ -9,7 +9,7 @@ export const menu: MenuItem[] = [
   { label: "Lançamentos", path: "/launches" },
   // { label: "Compromissos", path: "/commitments" },
   { label: "Contas", path: "/accounts" },
-  // { label: "Orçamento", path: "/budget" },
+  { label: "Orçamentos", path: "/budgets" },
   {
     label: "Relatórios",
     path: "/reports",
