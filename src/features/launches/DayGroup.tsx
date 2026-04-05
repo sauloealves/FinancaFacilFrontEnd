@@ -6,6 +6,8 @@ type DayGroupProps = {
   day: DayGroupType;
   isCollapsed: boolean;
   onToggleCollapse: () => void;
+  selectedLaunchIds: string[];
+  onToggleLaunchSelection: (rowId: string, checked: boolean) => void;
   onEdit: (row: LaunchRowType) => void;
   onDelete: (row: LaunchRowType) => void;
 };
@@ -14,6 +16,8 @@ export default function DayGroup({
   day,
   isCollapsed,
   onToggleCollapse,
+  selectedLaunchIds,
+  onToggleLaunchSelection,
   onEdit,
   onDelete,
 }: Readonly<DayGroupProps>) {
@@ -53,9 +57,10 @@ export default function DayGroup({
               <LaunchRow
                 key={row.id}
                 row={row}
+                isSelected={selectedLaunchIds.includes(row.id)}
+                onToggleSelection={onToggleLaunchSelection}
                 onEdit={(currentRow) => {
                   onEdit(currentRow);
-                  console.log("Editando linha", currentRow);
                 }}
                 onDelete={onDelete}
               />
