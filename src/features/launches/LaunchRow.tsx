@@ -5,14 +5,32 @@ import { isTransactionType } from "../../utils/sortUtils";
 
 type LaunchRowProps = {
   row: LaunchRowType;
+  isSelected: boolean;
+  onToggleSelection: (rowId: string, checked: boolean) => void;
   onEdit: (row: LaunchRowType) => void;
   onDelete: (row: LaunchRowType) => void;
 };
 
-export default function LaunchRow({row, onEdit, onDelete}: Readonly<LaunchRowProps>) {
+export default function LaunchRow({
+  row,
+  isSelected,
+  onToggleSelection,
+  onEdit,
+  onDelete,
+}: Readonly<LaunchRowProps>) {
 
   return (
     <div className={`launch-row ${row.type}`}>
+      <span className="col-select">
+        <input
+          type="checkbox"
+          checked={isSelected}
+          aria-label={`Selecionar lançamento ${row.description}`}
+          onChange={(event) => onToggleSelection(row.id, event.target.checked)}
+          onClick={(event) => event.stopPropagation()}
+        />
+      </span>
+
       <button
         type="button"
         className="row-edit-trigger col-description"

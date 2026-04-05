@@ -8,9 +8,49 @@
 .launch-table-header {
   display: flex;
   justify-content: space-between;
-  align-items: center;
+  align-items: flex-start;
   gap: var(--space-3);
   flex-wrap: wrap;
+}
+
+.launch-table-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+  flex-wrap: wrap;
+}
+
+.sort-control {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--gray-700);
+  font-size: var(--font-label);
+}
+
+.sort-control select {
+  min-width: 180px;
+  border: 1px solid var(--gray-300);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--gray-900);
+  padding: 8px 14px;
+  font: inherit;
+}
+
+.bulk-actions {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.bulk-selection-count {
+  color: var(--gray-700);
+  font-size: var(--font-label);
+  font-weight: 600;
 }
 
 .collapse-all-button {
@@ -31,6 +71,41 @@
 .collapse-all-button:focus-visible {
   outline: 2px solid var(--primary-600);
   outline-offset: 2px;
+}
+
+.secondary-inline-button,
+.danger-inline-button {
+  border-radius: 999px;
+  padding: 8px 14px;
+  font-size: var(--font-label);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.secondary-inline-button {
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  color: var(--gray-800);
+}
+
+.danger-inline-button {
+  border: 1px solid #fda29b;
+  background: #fef3f2;
+  color: #b42318;
+}
+
+.secondary-inline-button:disabled,
+.danger-inline-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.secondary-inline-button:not(:disabled):hover {
+  background: var(--gray-50);
+}
+
+.danger-inline-button:not(:disabled):hover {
+  background: #fee4e2;
 }
 
 .opening-balance {
@@ -147,8 +222,9 @@
 /* ROW */
 .launch-row {
   display: grid;
-  grid-template-columns: 2fr 2fr 2fr 1fr auto;
+  grid-template-columns: auto 2fr 2fr 2fr 1fr auto;
   align-items: center;
+  column-gap: 12px;
   padding: var(--space-3);
   border-bottom: 1px solid var(--gray-100);
   font-size: var(--font-body);
@@ -180,6 +256,19 @@
   outline: 2px solid var(--primary-600);
   outline-offset: 2px;
   border-radius: 6px;
+}
+
+.col-select {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.col-select input {
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
 }
 
 .col-actions {
@@ -225,7 +314,9 @@
 
 :root[data-theme="dark"] .day-collapsed-balance,
 :root[data-theme="dark"] .day-count,
-:root[data-theme="dark"] .day-footer span {
+:root[data-theme="dark"] .day-footer span,
+:root[data-theme="dark"] .bulk-selection-count,
+:root[data-theme="dark"] .sort-control {
   color: #dbe7ff;
 }
 
@@ -252,9 +343,43 @@
   color: #c7dcff;
 }
 
+:root[data-theme="dark"] .sort-control select,
+:root[data-theme="dark"] .secondary-inline-button {
+  background: #132238;
+  border-color: #2f4664;
+  color: #f8fbff;
+}
+
+:root[data-theme="dark"] .danger-inline-button {
+  background: rgba(180, 35, 24, 0.18);
+  border-color: rgba(253, 162, 155, 0.45);
+  color: #fecaca;
+}
+
 @media (max-width: 640px) {
   .launch-table-header {
     align-items: flex-start;
+  }
+
+  .launch-table-toolbar {
+    width: 100%;
+    justify-content: flex-start;
+  }
+
+  .sort-control {
+    width: 100%;
+    justify-content: space-between;
+  }
+
+  .sort-control select {
+    min-width: 0;
+    width: 100%;
+    max-width: 220px;
+  }
+
+  .bulk-actions {
+    width: 100%;
+    justify-content: flex-start;
   }
 
   .opening-balance-group {
@@ -279,16 +404,22 @@
   }
 
   .launch-row {
-    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     grid-template-areas:
-      "description actions"
-      "account actions"
-      "category actions"
-      "value actions";
+      "select description actions"
+      "select account actions"
+      "select category actions"
+      "select value actions";
     align-items: start;
     column-gap: 14px;
     row-gap: 10px;
     padding: 16px 14px;
+  }
+
+  .col-select {
+    grid-area: select;
+    align-self: start;
+    padding-top: 3px;
   }
 
   .col-description,

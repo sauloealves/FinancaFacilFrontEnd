@@ -1,6 +1,7 @@
 export type LaunchType = "income" | "expense" | "transfer";
 export type OccurrenceType = "single" | "installment" | "recurring";
 export type FailedTransactionType = Extract<LaunchType, "income" | "expense">;
+export type LaunchSortField = "default" | "description" | "account" | "category" | "value";
 
 export type AccountRef = {
   id: string;
