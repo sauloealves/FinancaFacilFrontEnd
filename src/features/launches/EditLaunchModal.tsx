@@ -10,8 +10,9 @@ import { formatBRLInputSigned, maskBRLInput, parseBRL } from "../../utils/curren
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import AccountModal from "../accounts/components/AccountModal";
 import { isTransactionType } from "../../utils/sortUtils";
-import { Input } from "../../components/ui";
+import { Button, Input, Modal } from "../../components/ui";
 import { updateLaunch as updateLaunchAPI } from "../../services/launchService";
+import type { DeleteLaunchScope } from "../../services/launchService";
 
 
 type Props = {
@@ -24,7 +25,7 @@ export default function EditLaunchModal({
     launch,
     onClose,
     onSave,
-}: Props) {
+}: Readonly<Props>) {
     const [type, setType] = useState(launch.type);
     const [date, setDate] = useState(launch.date);
     const [description, setDescription] = useState(launch.description);
@@ -39,6 +40,8 @@ export default function EditLaunchModal({
     const { accounts, addAccount, reloadAccounts } = useAccounts();
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showAccountModal, setShowAccountModal] = useState(false);
+    const [showScopeModal, setShowScopeModal] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
 
     const valueRef = useRef<HTMLInputElement>(null);
 
@@ -53,10 +56,10 @@ export default function EditLaunchModal({
             }
         }
 
-        window.addEventListener("keydown", handleKeyDown);
+        globalThis.addEventListener("keydown", handleKeyDown);
 
         return () => {
-            window.removeEventListener("keydown", handleKeyDown);
+            globalThis.removeEventListener("keydown", handleKeyDown);
         };
     }, [onClose]);
 
@@ -64,10 +67,12 @@ export default function EditLaunchModal({
         // keep compatibility if needed; accounts come from context
     }, []);
 
-    function handleSave() {
-        const numericValue = parseBRL(value);
+    function isSeriesLaunch() {
+        return launch.occurrenceType === "installment" || launch.occurrenceType === "recurring";
+    }
 
-        setSubmitError("");
+    function buildPayload() {
+        const numericValue = parseBRL(value);
 
         const payload: any = {
             transactionId: launch.id,
@@ -75,7 +80,7 @@ export default function EditLaunchModal({
             value: numericValue,
             startDate: date,
             type,
-            occurrenceType: "Single",
+            occurrenceType: launch.occurrenceType ?? "single",
         };
 
         if (isTransactionType(type, "transfer")) {
@@ -86,14 +91,45 @@ export default function EditLaunchModal({
             payload.categoryId = categoryId;
         }
 
-        updateLaunchAPI(launch.id, payload)
+        return payload;
+    }
+
+    function shouldAskEditScope() {
+        return !isTransactionType(type, "transfer") && isSeriesLaunch();
+    }
+
+    function handleSave() {
+        if (!valid || isSaving) {
+            return;
+        }
+
+        setSubmitError("");
+
+        if (shouldAskEditScope()) {
+            setShowScopeModal(true);
+            return;
+        }
+
+        void submitWithScope("OnlyThis");
+    }
+
+    async function submitWithScope(scope: DeleteLaunchScope) {
+        const payload = buildPayload();
+        setSubmitError("");
+        setIsSaving(true);
+
+        updateLaunchAPI(launch.id, payload, scope)
             .then((result) => {
+                setShowScopeModal(false);
                 onSave(result);
             })
             .catch((err) => {
                 console.error("Erro ao atualizar lançamento:", err);
                 const errorMsg = err?.response?.data?.message || err?.message || "Erro ao atualizar lançamento";
                 setSubmitError(errorMsg);
+            })
+            .finally(() => {
+                setIsSaving(false);
             });
     }
 
@@ -117,6 +153,8 @@ export default function EditLaunchModal({
     }
 
     const valid = isValid();
+    const dateFieldClassName = date ? "field-date" : "field-date invalid";
+    const descriptionFieldClassName = description.trim() ? "field-description" : "field-description invalid";
 
     async function handleCreateCategory(data: { name: string; parentId?: string | null }) {
         try {
@@ -170,7 +208,7 @@ export default function EditLaunchModal({
 
                     <Input
                     label="Data"
-                        className={`field-date ${!date ? "invalid" : ""}`}
+                        className={dateFieldClassName}
                         type="date"
                         value={date}
                         onChange={e => setDate(e.target.value)}
@@ -178,7 +216,7 @@ export default function EditLaunchModal({
 
                     <Input
                         label="Descrição"
-                        className={`field-description ${!description.trim() ? "invalid" : ""}`}
+                        className={descriptionFieldClassName}
                         value={description}
                         onChange={e => setDescription(e.target.value)}
                     />
@@ -271,7 +309,7 @@ export default function EditLaunchModal({
                     <button className="btn-cancelar" onClick={onClose}>
                         Cancelar
                     </button>
-                    <button className="btn-salvar" onClick={handleSave} disabled={!valid}>
+                    <button className="btn-salvar" onClick={handleSave} disabled={!valid || isSaving}>
                         Salvar
                     </button>
                 </div>
@@ -297,6 +335,40 @@ export default function EditLaunchModal({
                         onSave={handleCreateCategory}
                     />
                 )}
+
+                <Modal
+                    isOpen={showScopeModal}
+                    title="Aplicar edição"
+                    onClose={() => {
+                        if (isSaving) return;
+                        setShowScopeModal(false);
+                    }}
+                    size="md"
+                    footer={
+                        <>
+                            <Button
+                                variant="secondary"
+                                onClick={() => setShowScopeModal(false)}
+                                disabled={isSaving}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button onClick={() => void submitWithScope("OnlyThis")} disabled={isSaving}>
+                                Somente esta
+                            </Button>
+                            <Button variant="danger" onClick={() => void submitWithScope("FromFirst")} disabled={isSaving}>
+                                Desde a primeira
+                            </Button>
+                            <Button variant="danger" onClick={() => void submitWithScope("FromThis")} disabled={isSaving}>
+                                Desta para frente
+                            </Button>
+                        </>
+                    }
+                >
+                    <p style={{ margin: 0 }}>
+                        Esse lançamento faz parte de uma recorrência/parcelamento. Escolha como deseja aplicar a edição.
+                    </p>
+                </Modal>
 
             </div>
         </div>

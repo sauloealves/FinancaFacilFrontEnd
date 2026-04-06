@@ -269,7 +269,7 @@ export default function LaunchesPage() {
     try {
       for (const row of targetRows) {
         try {
-          await deleteLaunch(row.id, scope);
+          await deleteLaunch(row, scope);
         } catch {
           failedDeletes += 1;
         }
