@@ -348,6 +348,16 @@ function extractIndexedBatchErrors(responseData: unknown): IndexedBatchError[] {
   return extractBatchErrorsFromObject(responseData as Record<string, unknown>);
 }
 
+async function getRawLaunches(
+  filter?: GetTransactionsFilter,
+): Promise<RawLaunchApiItem[]> {
+  const { data } = await api.get<RawLaunchApiItem[]>("/transactions", {
+    params: filter,
+  });
+
+  return Array.isArray(data) ? data : [];
+}
+
 function shouldSplitBatchAfterError(error: unknown): boolean {
   if (!axios.isAxiosError(error)) {
     return false;
@@ -420,9 +430,7 @@ async function importBatchChunk(
 export async function getLaunches(
   filter?: GetTransactionsFilter,
 ): Promise<LaunchRow[]> {
-  const { data } = await api.get<RawLaunchApiItem[]>("/transactions", {
-    params: filter,
-  });
+  const data = await getRawLaunches(filter);
   const normalized = data.map((item) => normalizeLaunchFromAPI(item));
   return detectAndConvertTransfers(normalized, data);
 }
@@ -640,9 +648,21 @@ export async function importTransactionsBatch(
 export async function updateLaunch(
   id: string,
   payload: Partial<CreateTransactionPayload>,
+  scope: DeleteLaunchScope = "OnlyThis",
 ) {
   try {
-    const { data } = await api.put<RawLaunchApiItem | null>(`/transactions/${id}`, payload);
+    let editMode = "single";
+
+    if (scope === "FromFirst") {
+      editMode = "fromBeginning";
+    } else if (scope === "FromThis") {
+      editMode = "fromThis";
+    }
+
+    const { data } = await api.put<RawLaunchApiItem | null>(`/transactions/${id}`, {
+      ...payload,
+      EditMode: editMode,
+    });
     console.log("Resposta do servidor (update):", data);
 
     if (!data || typeof data !== "object") {
@@ -662,11 +682,36 @@ export async function updateLaunch(
 
 export type DeleteLaunchScope = "OnlyThis" | "FromFirst" | "FromThis";
 
+type DeleteLaunchTarget = Pick<LaunchRow, "id" | "type" | "groupId"> | string;
+
 export async function deleteLaunch(
-  id: string,
+  target: DeleteLaunchTarget,
   scope: DeleteLaunchScope = "OnlyThis",
 ) {
-  await api.delete(`/transactions/${id}`, {
+  if (typeof target === "string") {
+    await api.delete(`/transactions/${target}`, {
+      params: { scope },
+    });
+    return;
+  }
+
+  if (target.type === "transfer" && target.groupId) {
+    const relatedLaunches = await getRawLaunches({ occurrenceGroupId: target.groupId });
+    const relatedIds = [...new Set(relatedLaunches.map((launch) => launch.id).filter(Boolean))];
+
+    if (relatedIds.length > 0) {
+      await Promise.all(
+        relatedIds.map((id) =>
+          api.delete(`/transactions/${id}`, {
+            params: { scope },
+          }),
+        ),
+      );
+      return;
+    }
+  }
+
+  await api.delete(`/transactions/${target.id}`, {
     params: { scope },
   });
 }
