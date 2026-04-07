@@ -68,6 +68,18 @@
   color: var(--gray-900);
 }
 
+.profile-settings-backup-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.profile-settings-backup-hint {
+  color: var(--gray-600);
+  line-height: 1.5;
+}
+
 @media (max-width: 768px) {
   .profile-settings-section {
     padding: 16px;
@@ -75,5 +87,9 @@
 
   .profile-settings-grid {
     grid-template-columns: 1fr;
+  }
+
+  .profile-settings-backup-actions {
+    align-items: stretch;
   }
 }
