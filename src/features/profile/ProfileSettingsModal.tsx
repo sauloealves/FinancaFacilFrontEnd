@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { Button, Input, Modal } from "../../components/ui";
 import { useAuth } from "../../contexts/auth/AuthContext";
+import { getErrorMessage } from "../../services/api";
+import { exportUserBackup } from "../../services/exportService";
 import "./ProfileSettingsModal.css";
 
 type ProfileSettingsModalProps = {
@@ -44,6 +46,8 @@ export default function ProfileSettingsModal({
   };
   const [form, setForm] = useState<FormState>(() => createFormState(safeUser));
   const [errorMessage, setErrorMessage] = useState("");
+  const [backupErrorMessage, setBackupErrorMessage] = useState("");
+  const [isDownloadingBackup, setIsDownloadingBackup] = useState(false);
 
   if (!user) {
     return null;
@@ -70,6 +74,28 @@ export default function ProfileSettingsModal({
       },
     });
     onClose();
+  }
+
+  async function handleDownloadBackup() {
+    setBackupErrorMessage("");
+    setIsDownloadingBackup(true);
+
+    try {
+      const { fileBlob, fileName } = await exportUserBackup();
+      const downloadUrl = URL.createObjectURL(fileBlob);
+      const link = document.createElement("a");
+
+      link.href = downloadUrl;
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(downloadUrl);
+    } catch (error) {
+      setBackupErrorMessage(getErrorMessage(error, "Nao foi possivel baixar o backup agora."));
+    } finally {
+      setIsDownloadingBackup(false);
+    }
   }
 
   return (
@@ -183,6 +209,30 @@ export default function ProfileSettingsModal({
                 <span>Email</span>
               </label>
             </div>
+          )}
+        </section>
+
+        <section className="profile-settings-section">
+          <div className="profile-settings-section-header">
+            <h4>Backup dos dados</h4>
+            <p>Baixe um arquivo Excel com toda a base de dados da sua conta.</p>
+          </div>
+
+          <div className="profile-settings-backup-actions">
+            <Button
+              variant="secondary"
+              onClick={handleDownloadBackup}
+              disabled={isDownloadingBackup}
+            >
+              {isDownloadingBackup ? "Baixando backup..." : "Baixar backup (.xlsx)"}
+            </Button>
+            <span className="profile-settings-backup-hint">
+              O arquivo sera gerado pelo servidor e baixado em formato XLSX.
+            </span>
+          </div>
+
+          {backupErrorMessage && (
+            <div className="profile-settings-feedback error">{backupErrorMessage}</div>
           )}
         </section>
       </div>
