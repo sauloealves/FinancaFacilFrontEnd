@@ -11,6 +11,7 @@ import EditLaunchModal from "../features/launches/EditLaunchModal";
 import { askAi } from "../services/aiService";
 import { getLaunches as fetchLaunches, type GetTransactionsFilter } from "../services/launchService";
 import type { LaunchRow } from "../features/launches/types";
+import type { PeriodMode } from "../contexts/period.types";
 
 import "./Dashboard.css";
 
@@ -162,6 +163,37 @@ function renderAiInline(text: string) {
   });
 }
 
+function getPreviousPeriod(monthText: string, mode: PeriodMode): string {
+  const [yearText, monthNumberText] = monthText.split("-");
+  const year = Number(yearText);
+  const monthNumber = Number(monthNumberText);
+
+  if (mode === "yearly") {
+    return `${year - 1}-${monthNumberText}`;
+  }
+
+  if (monthNumber > 1) {
+    return `${year}-${String(monthNumber - 1).padStart(2, "0")}`;
+  }
+
+  return `${year - 1}-12`;
+}
+
+function getDateRangeFromPeriod(monthText: string, mode: PeriodMode): GetTransactionsFilter {
+  if (mode === "yearly") {
+    const year = monthText.slice(0, 4);
+    return { startDate: `${year}-01-01`, endDate: `${year}-12-31` };
+  }
+
+  const [year, monthNumber] = monthText.split("-");
+  const startDate = `${year}-${monthNumber}-01`;
+  const nextMonth = new Date(Number(year), Number(monthNumber), 1);
+  nextMonth.setDate(0);
+  const endDate = nextMonth.toISOString().split("T")[0];
+
+  return { startDate, endDate };
+}
+
 export default function DashboardPage() {
   const [open, setOpen] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
@@ -172,39 +204,17 @@ export default function DashboardPage() {
   const [editingLaunch, setEditingLaunch] = useState<LaunchRow | null>(null);
   const { launches, reloadLaunches } = useLaunches();
   const { accounts, reloadAccounts } = useAccounts();
-  const { month } = usePeriod();
+  const { month, mode } = usePeriod();
   const { selectedAccounts } = useAccountFilter();
   const aiResponseBlocks = useMemo(() => parseAiResponse(aiResponse), [aiResponse]);
 
   useEffect(() => {
     let mounted = true;
 
-    function getPreviousMonth(monthText: string): string {
-      const [yearText, monthNumberText] = monthText.split("-");
-      const year = Number(yearText);
-      const monthNumber = Number(monthNumberText);
-
-      if (monthNumber > 1) {
-        return `${year}-${String(monthNumber - 1).padStart(2, "0")}`;
-      }
-
-      return `${year - 1}-12`;
-    }
-
-    function getDateRangeFromMonth(monthText: string) {
-      const [year, monthNumber] = monthText.split("-");
-      const startDate = `${year}-${monthNumber}-01`;
-      const nextMonth = new Date(Number(year), Number(monthNumber), 1);
-      nextMonth.setDate(0);
-      const endDate = nextMonth.toISOString().split("T")[0];
-
-      return { startDate, endDate };
-    }
-
     async function loadPreviousMonthLaunches() {
       try {
-        const previousMonth = getPreviousMonth(month);
-        const { startDate, endDate } = getDateRangeFromMonth(previousMonth);
+        const previousMonth = getPreviousPeriod(month, mode);
+        const { startDate, endDate } = getDateRangeFromPeriod(previousMonth, mode);
         const filter: GetTransactionsFilter = { startDate, endDate };
         const data = await fetchLaunches(filter);
 
@@ -224,7 +234,7 @@ export default function DashboardPage() {
     return () => {
       mounted = false;
     };
-  }, [month]);
+  }, [month, mode]);
 
   const dashboardData = useMemo(() => {
     const filterLaunchesBySelectedAccounts = (sourceLaunches: LaunchRow[]) =>
@@ -250,6 +260,7 @@ export default function DashboardPage() {
       ...filteredPreviousMonthLaunches,
       ...filteredLaunches,
     ];
+    const periodPrefix = mode === "yearly" ? `${month.slice(0, 4)}-` : month;
 
     const filteredAccounts =
       selectedAccounts.length === 0
@@ -265,21 +276,18 @@ export default function DashboardPage() {
     // Lançamentos do mês selecionado
     const selectedMonthLaunches = filteredLaunches.filter((launch) => {
       const launchMonth = launch.date.substring(0, 7);
-      return launchMonth === month && !isTransactionType(launch.type, "transfer");
+      return launchMonth.startsWith(periodPrefix) && !isTransactionType(launch.type, "transfer");
     });
 
-    // Entradas do mês (receitas)
-    const monthlyIncome = selectedMonthLaunches
+    const periodIncome = selectedMonthLaunches
       .filter(l => isTransactionType(l.type, "income"))
       .reduce((sum, l) => sum + l.value, 0);
 
-    // Saídas do mês (despesas)
-    const monthlyExpense = selectedMonthLaunches
+    const periodExpense = selectedMonthLaunches
       .filter(l => isTransactionType(l.type, "expense"))
       .reduce((sum, l) => sum + Math.abs(l.value), 0);
 
-    // Resultado do mês
-    const monthlyResult = monthlyIncome - monthlyExpense;
+    const periodResult = periodIncome - periodExpense;
 
     // Últimos lançamentos (ordenados por data descendente, sem transferências)
     const recentLaunches = filteredLaunches
@@ -299,15 +307,17 @@ export default function DashboardPage() {
 
     return {
       totalBalance,
-      monthlyIncome,
-      monthlyExpense,
-      monthlyResult,
+      periodIncome,
+      periodExpense,
+      periodResult,
       recentLaunches,
       upcomingLaunches,
       filteredLaunches,
       comparisonLaunches,
     };
-  }, [launches, previousMonthLaunches, accounts, month, selectedAccounts]);
+  }, [launches, previousMonthLaunches, accounts, mode, month, selectedAccounts]);
+
+  const periodLabel = mode === "yearly" ? "ano" : "mês";
 
   const formatCurrency = (value: number) => {
     return value.toLocaleString("pt-BR", {
@@ -382,17 +392,17 @@ export default function DashboardPage() {
             <span className="kpi-value">{formatCurrency(dashboardData.totalBalance)}</span>
           </Card>
 
-          <Card title="Entradas do mês">
-            <span className="kpi-value positive">{formatCurrency(dashboardData.monthlyIncome)}</span>
+          <Card title={`Entradas do ${periodLabel}`}>
+            <span className="kpi-value positive">{formatCurrency(dashboardData.periodIncome)}</span>
           </Card>
 
-          <Card title="Saídas do mês">
-            <span className="kpi-value negative">{formatCurrency(dashboardData.monthlyExpense)}</span>
+          <Card title={`Saídas do ${periodLabel}`}>
+            <span className="kpi-value negative">{formatCurrency(dashboardData.periodExpense)}</span>
           </Card>
 
           <Card title="Resultado">
-            <span className={`kpi-value ${dashboardData.monthlyResult >= 0 ? "positive" : "negative"}`}>
-              {formatCurrency(dashboardData.monthlyResult)}
+            <span className={`kpi-value ${dashboardData.periodResult >= 0 ? "positive" : "negative"}`}>
+              {formatCurrency(dashboardData.periodResult)}
             </span>
           </Card>
         </div>
@@ -433,6 +443,7 @@ export default function DashboardPage() {
             <ExpenseChart
               launches={dashboardData.filteredLaunches}
               month={month}
+              periodMode={mode}
               maxItems={10}
               onLaunchClick={(launch) => setEditingLaunch(launch)}
             />
@@ -442,6 +453,7 @@ export default function DashboardPage() {
             <MonthlyComparisonChart
               launches={dashboardData.comparisonLaunches}
               month={month}
+              periodMode={mode}
               type="expense"
             />
           </Card>
@@ -450,6 +462,7 @@ export default function DashboardPage() {
             <MonthlyComparisonChart
               launches={dashboardData.comparisonLaunches}
               month={month}
+              periodMode={mode}
               type="income"
             />
           </Card>

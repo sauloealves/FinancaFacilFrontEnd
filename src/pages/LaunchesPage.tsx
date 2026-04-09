@@ -166,7 +166,7 @@ function getDeleteModalMessage(
  * Caminho: /launches
  */
 export default function LaunchesPage() {
-  const { month } = usePeriod();
+  const { month, mode, year } = usePeriod();
   const [editing, setEditing] = useState<LaunchRow | null>(null);
   const [pendingDelete, setPendingDelete] = useState<LaunchRow | null>(null);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
@@ -184,11 +184,11 @@ export default function LaunchesPage() {
   useEffect(() => {
     const loadBalance = async () => {
       setLoadingBalance(true);
-      const [year, monthNum] = month.split("-");
+      const [, monthNum] = month.split("-");
 
       const balance = await getOpeningBalance(
         Number(year),
-        Number(monthNum),
+        mode === "yearly" ? 1 : Number(monthNum),
         1,
         selectedAccounts.length > 0 ? selectedAccounts : undefined,
       );
@@ -198,7 +198,7 @@ export default function LaunchesPage() {
     };
 
     void loadBalance();
-  }, [month, selectedAccounts]);
+  }, [month, mode, selectedAccounts, year]);
 
   const openingBalance = ignoreHistoricalBalance ? 0 : historicalOpeningBalance;
 
@@ -218,6 +218,7 @@ export default function LaunchesPage() {
 
   const tableData = normalizeLaunches({
     month,
+    mode,
     openingBalance,
     launches: filteredLaunches,
     selectedAccounts,

@@ -13,6 +13,7 @@ import { useAuth } from "../../../contexts/auth/AuthContext";
 import { useLaunches } from "../../../contexts/launches/useLaunches";
 import { useTheme } from "../../../contexts/theme/useTheme";
 import { useNavigate } from "react-router-dom";
+import type { PeriodMode } from "../../../contexts/period.types";
 
 const themeToggleLabels = {
   dark: "Ativar tema claro",
@@ -27,12 +28,17 @@ const themeToggleIcons = {
 type HeaderProps = {
   title?: string;
   month?: string;
-  onMonthChange?: (month: string) => void;
+  periodMode?: PeriodMode;
+  onPeriodChange?: (period: { mode: PeriodMode; month: string }) => void;
   showImportAction?: boolean;
   isSidebarOpen: boolean;
   isSidebarCollapsed: boolean;
   onToggleSidebar: () => void;
 };
+
+function buildMonthKey(year: number, month: number): string {
+  return `${year}-${String(month).padStart(2, "0")}`;
+}
 
 function getNextMonth(monthStr: string): string {
   const [year, month] = monthStr.split("-");
@@ -59,7 +65,8 @@ function getPreviousMonth(monthStr: string): string {
 export default function Header({
   title = "Dashboard",
   month,
-  onMonthChange,
+  periodMode = "monthly",
+  onPeriodChange,
   showImportAction = false,
   isSidebarOpen,
   isSidebarCollapsed,
@@ -80,9 +87,15 @@ export default function Header({
   const [showMobileActions, setShowMobileActions] = useState(false);
   const userMenuRef = useRef<HTMLDivElement>(null);
   const pendingFailedTransactionsCount = failedTransactions.length;
+  const today = new Date();
+  const todayYear = today.getFullYear();
+  const todayMonth = today.getMonth() + 1;
   
   const currentYear = month ? Number.parseInt(month.split("-")[0], 10) : new Date().getFullYear();
   const currentMonth = month ? Number.parseInt(month.split("-")[1], 10) : new Date().getMonth() + 1;
+  const [draftYear, setDraftYear] = useState(currentYear);
+  const [draftMonth, setDraftMonth] = useState(currentMonth);
+  const [draftMode, setDraftMode] = useState<PeriodMode>(periodMode);
   
   const months = [
     "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
@@ -90,19 +103,73 @@ export default function Header({
   ];
   const themeToggleLabel = themeToggleLabels[theme];
   const themeToggleIcon = themeToggleIcons[theme];
+
+  useEffect(() => {
+    setDraftYear(currentYear);
+    setDraftMonth(currentMonth);
+    setDraftMode(periodMode);
+  }, [currentMonth, currentYear, periodMode]);
   
   const handleMonthSelect = (selectedMonth: number) => {
-    if (onMonthChange) {
-      onMonthChange(`${currentYear}-${String(selectedMonth).padStart(2, "0")}`);
-      setShowMonthPicker(false);
-    }
+    setDraftMonth(selectedMonth);
+    setDraftMode("monthly");
   };
   
   const handleYearChange = (year: number) => {
-    if (onMonthChange) {
-      onMonthChange(`${year}-${String(currentMonth).padStart(2, "0")}`);
+    setDraftYear(year);
+  };
+
+  const handleApplyPeriod = () => {
+    if (onPeriodChange) {
+      onPeriodChange({
+        mode: draftMode,
+        month: buildMonthKey(draftYear, draftMonth),
+      });
+      setShowMonthPicker(false);
     }
   };
+
+  const handleCurrentPeriod = () => {
+    if (onPeriodChange) {
+      onPeriodChange({
+        mode: "monthly",
+        month: buildMonthKey(todayYear, todayMonth),
+      });
+      setShowMonthPicker(false);
+    }
+  };
+
+  const handlePreviousPeriod = () => {
+    if (!month || !onPeriodChange) return;
+
+    if (periodMode === "yearly") {
+      onPeriodChange({
+        mode: "yearly",
+        month: buildMonthKey(currentYear - 1, currentMonth),
+      });
+      return;
+    }
+
+    onPeriodChange({ mode: "monthly", month: getPreviousMonth(month) });
+  };
+
+  const handleNextPeriod = () => {
+    if (!month || !onPeriodChange) return;
+
+    if (periodMode === "yearly") {
+      onPeriodChange({
+        mode: "yearly",
+        month: buildMonthKey(currentYear + 1, currentMonth),
+      });
+      return;
+    }
+
+    onPeriodChange({ mode: "monthly", month: getNextMonth(month) });
+  };
+
+  const formattedPeriodLabel = periodMode === "yearly"
+    ? `Ano de ${currentYear}`
+    : `${formatMonthBR(month ?? buildMonthKey(currentYear, currentMonth)).charAt(0).toUpperCase()}${formatMonthBR(month ?? buildMonthKey(currentYear, currentMonth)).slice(1)}`;
 
   function handleOpenRevenue() {
     setShowMobileActions(false);
@@ -197,23 +264,23 @@ export default function Header({
       </div>
 
       <div className="header-center">
-        {month && onMonthChange && (
+        {month && onPeriodChange && (
           <div className="month-navigator">
             <button
               className="month-btn"
-              onClick={() => onMonthChange(getPreviousMonth(month))}
-              title="Mês anterior"
+              onClick={handlePreviousPeriod}
+              title={periodMode === "yearly" ? "Ano anterior" : "Mês anterior"}
             >
               ←
             </button>
             <div className="month-picker-wrapper">
               <span className="month-display">
-                {formatMonthBR(month).charAt(0).toUpperCase() + formatMonthBR(month).slice(1)}
+                {formattedPeriodLabel}
               </span>
               <button
                 className="calendar-btn"
                 onClick={() => setShowMonthPicker(!showMonthPicker)}
-                title="Selecionar mês e ano"
+                title="Selecionar período"
               >
                 📅
               </button>
@@ -223,15 +290,15 @@ export default function Header({
                   <div className="year-selector">
                     <button
                       className="year-nav-btn"
-                      onClick={() => handleYearChange(currentYear - 1)}
+                      onClick={() => handleYearChange(draftYear - 1)}
                       title="Ano anterior"
                     >
                       ←
                     </button>
-                    <span className="year-display">{currentYear}</span>
+                    <span className="year-display">{draftYear}</span>
                     <button
                       className="year-nav-btn"
-                      onClick={() => handleYearChange(currentYear + 1)}
+                      onClick={() => handleYearChange(draftYear + 1)}
                       title="Próximo ano"
                     >
                       →
@@ -242,20 +309,27 @@ export default function Header({
                     {months.map((monthName, index) => (
                       <button
                         key={monthName}
-                        className={`month-option ${currentMonth === index + 1 ? "active" : ""}`}
+                        className={`month-option ${draftMode === "monthly" && draftMonth === index + 1 ? "active" : ""}`}
                         onClick={() => handleMonthSelect(index + 1)}
                       >
                         {monthName.substring(0, 3)}
                       </button>
                     ))}
                   </div>
+
+                  <div className="month-picker-actions">
+                    <Button variant="secondary" onClick={handleCurrentPeriod}>
+                      Período Atual
+                    </Button>
+                    <Button onClick={handleApplyPeriod}>Ir</Button>
+                  </div>
                 </div>
               )}
             </div>
             <button
               className="month-btn"
-              onClick={() => onMonthChange(getNextMonth(month))}
-              title="Próximo mês"
+              onClick={handleNextPeriod}
+              title={periodMode === "yearly" ? "Próximo ano" : "Próximo mês"}
             >
               →
             </button>

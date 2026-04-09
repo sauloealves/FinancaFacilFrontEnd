@@ -3,6 +3,7 @@ import { isTransactionType } from "../../utils/sortUtils";
 
 type NormalizeInput = {
   month: string;
+  mode?: "monthly" | "yearly";
   openingBalance: number;
   launches: LaunchRow[];
   selectedAccounts?: string[];
@@ -39,12 +40,14 @@ function calculateRowBalanceImpact(
 
 export function normalizeLaunches({
   month,
+  mode = "monthly",
   openingBalance,
   launches,
   selectedAccounts = [],
 }: NormalizeInput): LaunchTableData {
+  const periodPrefix = mode === "yearly" ? `${month.slice(0, 4)}-` : month;
   const monthLaunches = launches.filter(l =>
-    l.date.startsWith(month)
+    l.date.startsWith(periodPrefix)
   );
 
   monthLaunches.sort((a, b) => a.date.localeCompare(b.date));

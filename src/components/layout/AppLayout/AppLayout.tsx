@@ -33,7 +33,8 @@ export default function AppLayout() {
   const sidebarDrawerBreakpoint = 1100;
   const location = useLocation();
   const title = getPageTitle(location.pathname);
-  const { month, setMonth } = usePeriod();
+  const period = usePeriod();
+  const shouldShowPeriodControls = ["/", "/launches", "/dashboard"].includes(location.pathname);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
@@ -70,8 +71,9 @@ export default function AppLayout() {
           <div className="app-main">
             <Header
               title={title}
-              month={["/", "/launches", "/dashboard"].includes(location.pathname) ? month : undefined}
-              onMonthChange={setMonth}
+              month={shouldShowPeriodControls ? period.month : undefined}
+              periodMode={shouldShowPeriodControls ? period.mode : undefined}
+              onPeriodChange={period.setPeriod}
               showImportAction={location.pathname === "/launches"}
               isSidebarOpen={isSidebarOpen}
               isSidebarCollapsed={isSidebarCollapsed}

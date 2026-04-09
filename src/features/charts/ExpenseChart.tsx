@@ -11,11 +11,13 @@ import {
 import type { LaunchRow } from "../launches/types";
 import { isTransactionType } from "../../utils/sortUtils";
 import { formatDateBR } from "../../utils/date";
+import type { PeriodMode } from "../../contexts/period.types";
 import "./ExpenseChart.css";
 
 type ExpenseChartProps = {
   launches: LaunchRow[];
   month: string;
+  periodMode?: PeriodMode;
   maxItems?: number;
   onLaunchClick?: (launch: LaunchRow) => void;
 };
@@ -225,6 +227,7 @@ function ExpenseDetailsPanel({
 export default function ExpenseChart({
   launches,
   month,
+  periodMode = "monthly",
   maxItems = Number.POSITIVE_INFINITY,
   onLaunchClick,
 }: Readonly<ExpenseChartProps>) {
@@ -251,10 +254,11 @@ export default function ExpenseChart({
   }, [clearHideTimeout]);
 
   const limitedExpensesByCategory = useMemo(() => {
+    const periodPrefix = periodMode === "yearly" ? `${month.slice(0, 4)}-` : month;
     const monthExpenses = launches.filter((launch) => {
       const launchMonth = launch.date.substring(0, 7);
       return (
-        launchMonth === month &&
+        launchMonth.startsWith(periodPrefix) &&
         isTransactionType(launch.type, "expense") &&
         !isTransactionType(launch.type, "transfer")
       );
@@ -288,7 +292,7 @@ export default function ExpenseChart({
     });
 
     return expensesByCategory.slice(0, maxItems);
-  }, [launches, month, maxItems]);
+  }, [launches, month, maxItems, periodMode]);
 
   const chartHeight = Math.max(300, limitedExpensesByCategory.length * 56);
 
