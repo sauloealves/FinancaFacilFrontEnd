@@ -75,7 +75,6 @@ export default function Login() {
             </div>
           )}
 
-          {/* ❌ Erro login */}
           {error && (
             <div className="auth-error">
               {error}
@@ -98,8 +97,7 @@ export default function Login() {
             onChange={e => setPassword(e.target.value)}
           />
 
-          <Button
-            type="submit">
+          <Button type="submit">
             {loading ? "Entrando..." : "Entrar"}
           </Button>
 

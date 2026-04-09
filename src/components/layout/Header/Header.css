@@ -180,6 +180,19 @@
   gap: 8px;
 }
 
+.month-picker-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gray-200);
+}
+
+.month-picker-actions .btn {
+  flex: 1 1 0;
+}
+
 .month-option {
   padding: 10px 8px;
   border: 1px solid var(--gray-300);
@@ -501,6 +514,10 @@
     bottom: 88px;
     transform: none;
     min-width: 0;
+  }
+
+  .month-picker-actions {
+    flex-direction: column;
   }
 
   .mobile-actions-backdrop {

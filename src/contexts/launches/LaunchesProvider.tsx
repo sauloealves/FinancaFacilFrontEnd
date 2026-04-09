@@ -21,16 +21,23 @@ export function LaunchesProvider({
 }>) {
   const [failedTransactions, setFailedTransactions] = useState<FailedTransactionRow[]>([]);
   const [launches, setLaunches] = useState<LaunchRow[]>([]);
-  const { month } = usePeriod();
+  const { month, mode, year } = usePeriod();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
 
-  const getDateRangeFromMonth = (monthStr: string) => {
-    const [year, monthNum] = monthStr.split("-");
-    const startDate = `${year}-${monthNum}-01`;
+  const getDateRangeFromPeriod = (monthStr: string) => {
+    if (mode === "yearly") {
+      return {
+        startDate: `${year}-01-01`,
+        endDate: `${year}-12-31`,
+      };
+    }
+
+    const [periodYear, monthNum] = monthStr.split("-");
+    const startDate = `${periodYear}-${monthNum}-01`;
     
     // Último dia do mês
-    const nextMonth = new Date(Number(year), Number(monthNum), 1);
+    const nextMonth = new Date(Number(periodYear), Number(monthNum), 1);
     nextMonth.setDate(0);
     const endDate = nextMonth.toISOString().split("T")[0];
     
@@ -94,7 +101,7 @@ export function LaunchesProvider({
 
   const reloadLaunches = async () => {
     try {
-      const { startDate, endDate } = getDateRangeFromMonth(month);
+      const { startDate, endDate } = getDateRangeFromPeriod(month);
       const filter: GetTransactionsFilter = { startDate, endDate };
       const data = await fetchLaunches(filter);
       setLaunches(normalizeLaunchesData(data || []));
@@ -119,7 +126,7 @@ export function LaunchesProvider({
 
     const loadLaunches = async () => {
       try {
-        const { startDate, endDate } = getDateRangeFromMonth(month);
+        const { startDate, endDate } = getDateRangeFromPeriod(month);
         const filter: GetTransactionsFilter = { startDate, endDate };
         const data = await fetchLaunches(filter);
         if (mounted) setLaunches(normalizeLaunchesData(data || []));
@@ -150,7 +157,7 @@ export function LaunchesProvider({
     return () => {
       mounted = false;
     };
-  }, [month, accounts, categories]);
+  }, [month, mode, year, accounts, categories]);
 
   function updateLaunch(updated: LaunchRow) {
     setLaunches(prev =>
