@@ -495,7 +495,7 @@ function normalizeLaunchFromAPI(item: RawLaunchApiItem | null | undefined): Laun
 
     const base: LaunchRow = {
       id: item.id ?? "",
-      date: item.date ?? "",
+      date: normalizeDateFromBackend(item.date ?? ""),
       description: item.description ?? "",
       type: normalizeLaunchType(item.type?.toLowerCase()),
       value: item.value ?? 0,
