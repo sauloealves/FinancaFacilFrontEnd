@@ -141,6 +141,15 @@
   background: #1d4ed8;
 }
 
+.btn-action.launches {
+  background: #0f766e;
+  color: white;
+}
+
+.btn-action.launches:hover {
+  background: #115e59;
+}
+
 /* EXCLUIR */
 .btn-action.delete {
   background: #dc2626;

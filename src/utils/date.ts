@@ -4,8 +4,9 @@
  */
 
 export function formatDateBR(date: string): string {
-  const [year, month, day] = date.split("-");
-  return `${day}/${month}/${year}`;
+  const normalizedDate = normalizeDateFromBackend(date);
+  const [year, month, day] = normalizedDate.split("-");
+  return `${day?.padStart(2, "0") ?? ""}/${month?.padStart(2, "0") ?? ""}/${year?.padStart(4, "0") ?? ""}`;
 }
 
 export function parseLocalDate(date: string): Date {

@@ -5,6 +5,7 @@ type Props = {
   accounts: Account[];
   emptyMessage: string;
   onEdit: (account: Account) => void;
+  onViewLaunches: (account: Account) => void;
   onDelete: (id: string) => void;
   onToggleEnabled: (account: Account) => void;
 };
@@ -13,6 +14,7 @@ export default function AccountTable({
   accounts,
   emptyMessage,
   onEdit,
+  onViewLaunches,
   onDelete,
   onToggleEnabled,
 }: Readonly<Props>) {
@@ -62,6 +64,13 @@ export default function AccountTable({
                     onClick={() => onEdit(account)}
                 >
                     ✏ Editar
+                </button>
+
+                <button
+                  className="btn-action launches"
+                  onClick={() => onViewLaunches(account)}
+                >
+                  Ver Lançamentos
                 </button>
 
                 <button

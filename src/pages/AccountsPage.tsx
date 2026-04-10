@@ -6,9 +6,11 @@ import {
 } from "../services/accountService";
 import { getErrorMessage } from "../services/api";
 import AccountModal from "../features/accounts/components/AccountModal";
+import AccountLaunchesModal from "../features/accounts/components/AccountLaunchesModal";
 import AccountTable from "../features/accounts/components/AccountTable";
 import type { Account } from "../features/accounts/types";
 import { useAccounts } from "../contexts/accounts/useAccounts";
+import { useLaunches } from "../contexts/launches/useLaunches";
 import "./AccountsPage.css";
 
 export default function AccountsPage() {
@@ -20,15 +22,21 @@ export default function AccountsPage() {
   removeAccount,
   reloadAccounts
 } = useAccounts();
+  const { reloadLaunches } = useLaunches();
 
   const [editing, setEditing] =
     useState<Account | null>(null);
+  const [viewingLaunchesAccountId, setViewingLaunchesAccountId] = useState<string | null>(null);
 
   const [showModal, setShowModal] =
     useState(false);
 
   const enabledAccounts = accounts.filter((account) => account.isEnabled);
   const disabledAccounts = accounts.filter((account) => !account.isEnabled);
+  const viewingLaunchesAccount =
+    viewingLaunchesAccountId === null
+      ? null
+      : accounts.find((account) => account.id === viewingLaunchesAccountId) ?? null;
 
   async function handleSave(data: {
     name: string;
@@ -124,6 +132,7 @@ export default function AccountsPage() {
             setEditing(account);
             setShowModal(true);
           }}
+          onViewLaunches={(account) => setViewingLaunchesAccountId(account.id)}
           onDelete={handleDelete}
           onToggleEnabled={handleToggleEnabled}
         />
@@ -142,6 +151,7 @@ export default function AccountsPage() {
             setEditing(account);
             setShowModal(true);
           }}
+          onViewLaunches={(account) => setViewingLaunchesAccountId(account.id)}
           onDelete={handleDelete}
           onToggleEnabled={handleToggleEnabled}
         />
@@ -155,6 +165,17 @@ export default function AccountsPage() {
             setEditing(null);
           }}
           onSave={handleSave}
+        />
+      )}
+
+      {viewingLaunchesAccount && (
+        <AccountLaunchesModal
+          account={viewingLaunchesAccount}
+          onClose={() => setViewingLaunchesAccountId(null)}
+          onLaunchUpdated={async () => {
+            await reloadLaunches();
+            await reloadAccounts();
+          }}
         />
       )}
     </div>
