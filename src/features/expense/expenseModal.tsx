@@ -3,6 +3,7 @@ import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
 import { useLaunches } from "../../contexts/launches/useLaunches";
 import { useAccountFilter } from "../../contexts/AccountFilterContext";
+import { useKeywords } from "../../contexts/keywords/useKeywords";
 import { createCategory } from "../../services/categoryService";
 import { createTransaction } from "../../services/launchService";
 import CategoryModal from "../categories/CategoryModal";
@@ -12,6 +13,8 @@ import "./expenseModal.css";
 import AccountModal from "../accounts/components/AccountModal";
 import { sortCategoriesHierarchically } from "../../utils/sortUtils";
 import { maskBRLInput, parseBRL } from "../../utils/currency";
+import { findKeywordMatch } from "../launches/keywordMatcher";
+import { getTodayLocalDate } from "../../utils/date";
 
 type ExpenseModalProps = {
   isOpen: boolean;
@@ -44,6 +47,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
   const { categories, addCategory, reloadCategories } = useCategories();
   const { reloadLaunches } = useLaunches();
   const { selectedAccounts } = useAccountFilter();
+  const { keywords, upsertKeyword } = useKeywords();
   const [type, setType] = useState<LaunchType>("single");
   const [errors, setErrors] = useState<FormErrors>({});
   const [submitError, setSubmitError] = useState<string>("");
@@ -72,6 +76,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
     setForm(prev => ({
       ...prev,
       account: selectedSidebarAccountId,
+      startDate: prev.startDate || getTodayLocalDate(),
     }));
   }, [isOpen, selectedSidebarAccountId]);
 
@@ -173,8 +178,11 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
 
     createTransaction(expense)
       .then(async () => {
-        await reloadLaunches();
-        await reloadAccounts();
+        await Promise.all([
+          reloadLaunches(),
+          reloadAccounts(),
+          persistKeywordFromForm(),
+        ]);
         resetForm(form.startDate);
         globalThis.setTimeout(() => descriptionInputRef.current?.focus(), 0);
       })
@@ -186,6 +194,52 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
       .finally(() => {
         setIsSubmitting(false);
       });
+  }
+
+  async function persistKeywordFromForm() {
+    const keyword = form.description.trim();
+    const selectedCategory = categories.find((category) => category.id === form.category);
+    const selectedAccount = accounts.find((account) => account.id === form.account);
+
+    if (!keyword || !selectedCategory || !selectedAccount) {
+      return;
+    }
+
+    try {
+      await upsertKeyword({
+        keyword,
+        categoryId: selectedCategory.id,
+        categoryName: selectedCategory.name,
+        accountId: selectedAccount.id,
+        accountName: selectedAccount.name,
+      });
+    } catch (error) {
+      console.error("Erro ao salvar keyword da despesa:", error);
+    }
+  }
+
+  function handleDescriptionChange(value: string) {
+    const matchedKeyword = findKeywordMatch(keywords, value);
+
+    setForm((current) => ({
+      ...current,
+      description: value,
+      category: matchedKeyword?.categoryId ?? current.category,
+      account: matchedKeyword?.accountId ?? current.account,
+    }));
+
+    validateField("description", value);
+
+    if (!matchedKeyword) {
+      return;
+    }
+
+    setErrors((current) => {
+      const next = { ...current };
+      delete next.category;
+      delete next.account;
+      return next;
+    });
   }
 
   function resetForm(preservedStartDate: string) {
@@ -282,9 +336,7 @@ export default function ExpenseModal({ isOpen, onClose }: Readonly<ExpenseModalP
           value={form.description}
           error={errors.description}          
           onChange={e => {
-            const v = e.target.value;
-            setForm({ ...form, description: v });
-            validateField("description", v);
+            handleDescriptionChange(e.target.value);
           }}
         />
 

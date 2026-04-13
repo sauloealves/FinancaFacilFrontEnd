@@ -4,6 +4,7 @@ import { Button, Modal } from "../../components/ui";
 import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
+import { useKeywords } from "../../contexts/keywords/useKeywords";
 import { useLaunches } from "../../contexts/launches/useLaunches";
 import type { Account } from "../accounts/types";
 import type { Category } from "../categories/types";
@@ -23,6 +24,8 @@ import {
   sortCategoriesHierarchically,
 } from "../../utils/sortUtils";
 import "./ImportTransactionsAction.css";
+import { findKeywordMatch } from "../launches/keywordMatcher";
+import type { KeywordEntry } from "../../services/keywordService";
 
 type ImportTransactionsActionProps = {
   compact?: boolean;
@@ -94,9 +97,9 @@ type ImportRowIssueLevel = 0 | 1 | 2;
 function normalizeLookupValue(value: string): string {
   return value
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
+    .replaceAll(/[\u0300-\u036f]/g, "")
     .toLowerCase()
-    .replace(/\s+/g, " ")
+    .replaceAll(/\s+/g, " ")
     .trim();
 }
 
@@ -132,10 +135,10 @@ function parseLocalizedNumber(value: unknown): number {
   if (!raw) return 0;
 
   const cleaned = raw
-    .replace(/R\$/gi, "")
-    .replace(/\s+/g, "")
-    .replace(/\.(?=\d{3}(\D|$))/g, "")
-    .replace(/,/g, ".");
+    .replaceAll(/R\$/gi, "")
+    .replaceAll(/\s+/g, "")
+    .replaceAll(/\.(?=\d{3}(\D|$))/g, "")
+    .replaceAll(",", ".");
 
   const numeric = Number(cleaned);
   return Number.isFinite(numeric) ? numeric : 0;
@@ -216,6 +219,121 @@ function findMatchingAccountId(name: string, accounts: Account[]): string {
   if (!normalizedName) return "";
 
   return accounts.find((account) => normalizeLookupValue(account.name) === normalizedName)?.id ?? "";
+}
+
+function applyKeywordMappingToRegularRow(
+  row: RegularImportRow,
+  keywords: KeywordEntry[],
+  accounts: Account[],
+  categories: Category[],
+): RegularImportRow {
+  const matchedKeyword = findKeywordMatch(keywords, row.description);
+
+  if (!matchedKeyword) {
+    return row;
+  }
+
+  const resolvedCategoryId = categories.some((category) => category.id === matchedKeyword.categoryId)
+    ? matchedKeyword.categoryId
+    : row.categoryId;
+  const resolvedAccountId = accounts.some((account) => account.id === matchedKeyword.accountId)
+    ? matchedKeyword.accountId
+    : row.accountId;
+
+  return {
+    ...row,
+    categoryId: row.categoryId || resolvedCategoryId,
+    accountId: row.accountId || resolvedAccountId,
+  };
+}
+
+function buildTransferNotes(currentRow: ParsedExcelRow, nextRow?: ParsedExcelRow) {
+  const notes: string[] = [];
+  const shouldConsumeNextRow = Boolean(nextRow?.isTransfer);
+
+  if (!shouldConsumeNextRow) {
+    notes.push("Transferência deve possuir a linha seguinte para destino.");
+    return { notes, shouldConsumeNextRow };
+  }
+
+  if (currentRow.date && nextRow?.date && currentRow.date !== nextRow.date) {
+    notes.push("As duas linhas da transferência vieram com datas diferentes. Ajuste antes de importar.");
+  }
+
+  if (
+    currentRow.value !== 0 &&
+    nextRow &&
+    nextRow.value !== 0 &&
+    Math.abs(currentRow.value) !== Math.abs(nextRow.value)
+  ) {
+    notes.push("Os valores de origem e destino da transferência estão diferentes.");
+  }
+
+  return { notes, shouldConsumeNextRow };
+}
+
+function buildTransferImportRow(
+  currentRow: ParsedExcelRow,
+  nextRow: ParsedExcelRow | undefined,
+  accounts: Account[],
+): TransferImportRow {
+  const { notes, shouldConsumeNextRow } = buildTransferNotes(currentRow, nextRow);
+
+  return {
+    id: createRowId(),
+    rowType: "transfer",
+    selected: true,
+    description: currentRow.description || nextRow?.description || "Transferência",
+    date: currentRow.date || nextRow?.date || "",
+    amountInput: formatBRLInput(Math.abs(currentRow.value || nextRow?.value || 0)),
+    fromAccountId: findMatchingAccountId(currentRow.accountName, accounts),
+    toAccountId: findMatchingAccountId(nextRow?.accountName ?? "", accounts),
+    originalFromAccountName: currentRow.accountName,
+    originalToAccountName: nextRow?.accountName ?? "",
+    notes,
+    sourceLabel: shouldConsumeNextRow
+      ? `Linhas ${currentRow.sourceLine} e ${nextRow?.sourceLine ?? currentRow.sourceLine}`
+      : `Linha ${currentRow.sourceLine}`,
+  };
+}
+
+function buildRegularImportRow(
+  currentRow: ParsedExcelRow,
+  accounts: Account[],
+  categories: Category[],
+  keywords: KeywordEntry[],
+): RegularImportRow {
+  return applyKeywordMappingToRegularRow(
+    {
+      id: createRowId(),
+      rowType: "regular",
+      selected: true,
+      description: currentRow.description,
+      date: currentRow.date,
+      amountInput: formatBRLInputSigned(currentRow.value),
+      categoryId: findMatchingCategoryId(currentRow.categoryName, categories),
+      accountId: findMatchingAccountId(currentRow.accountName, accounts),
+      originalCategoryName: currentRow.categoryName,
+      originalAccountName: currentRow.accountName,
+      notes: [],
+      sourceLabel: `Linha ${currentRow.sourceLine}`,
+    },
+    keywords,
+    accounts,
+    categories,
+  );
+}
+
+function getAccountPlaceholder(row: ImportRow): string {
+  if (row.rowType === "transfer") {
+    return row.originalFromAccountName
+      ? `Origem: ${row.originalFromAccountName}`
+      : "Buscar conta origem...";
+  }
+
+  return row.originalAccountName
+    ? `Mapear: ${row.originalAccountName}`
+    : "Buscar conta...";
 }
 
 function findMatchingCategoryId(name: string, categories: Category[]): string {
@@ -335,6 +453,7 @@ export default function ImportTransactionsAction({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { accounts, reloadAccounts } = useAccounts();
   const { categories, reloadCategories } = useCategories();
+  const { keywords, upsertKeywordsBatch } = useKeywords();
   const { reloadLaunches } = useLaunches();
   const [isChooserOpen, setIsChooserOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
@@ -372,6 +491,10 @@ export default function ImportTransactionsAction({
     })
     .map(({ row }) => row);
 
+  function removeCreatingKey(key: string) {
+    setCreatingKeys((currentKeys) => currentKeys.filter((currentKey) => currentKey !== key));
+  }
+
   function resetState() {
     if (isBusy) return;
     setIsChooserOpen(false);
@@ -408,7 +531,7 @@ export default function ImportTransactionsAction({
       currentRows.map((row) =>
         row.id === id
           ? {
-              ...updater(row),
+              ...applyKeywordIfNeeded(updater(row)),
               serverError: undefined,
             }
           : row
@@ -416,6 +539,14 @@ export default function ImportTransactionsAction({
     );
     setSubmitError("");
     setSubmitSuccess("");
+  }
+
+  function applyKeywordIfNeeded(row: ImportRow): ImportRow {
+    if (row.rowType === "transfer") {
+      return row;
+    }
+
+    return applyKeywordMappingToRegularRow(row, keywords, activeAccounts, activeCategories);
   }
 
   function updateRowsMatching(
@@ -540,9 +671,7 @@ export default function ImportTransactionsAction({
 
   function withCreatingKey<T>(key: string, action: () => Promise<T>) {
     setCreatingKeys((currentKeys) => [...currentKeys, key]);
-    return action().finally(() => {
-      setCreatingKeys((currentKeys) => currentKeys.filter((currentKey) => currentKey !== key));
-    });
+    return action().finally(() => removeCreatingKey(key));
   }
 
   function isCreating(key: string) {
@@ -625,85 +754,83 @@ export default function ImportTransactionsAction({
 
     for (let index = 0; index < parsedRows.length; index += 1) {
       const currentRow = parsedRows[index];
+
       if (currentRow.isTransfer) {
         const nextRow = parsedRows[index + 1];
-        const notes: string[] = [];
-        let shouldConsumeNextRow = false;
+        const transferRow = buildTransferImportRow(currentRow, nextRow, sortedAccounts);
 
-        if (!nextRow?.isTransfer) {
-          notes.push("Transferência deve possuir a linha seguinte para destino.");
-        } else {
-          shouldConsumeNextRow = true;
-          if (currentRow.date && nextRow.date && currentRow.date !== nextRow.date) {
-            notes.push("As duas linhas da transferência vieram com datas diferentes. Ajuste antes de importar.");
-          }
-          if (
-            currentRow.value !== 0 &&
-            nextRow.value !== 0 &&
-            Math.abs(currentRow.value) !== Math.abs(nextRow.value)
-          ) {
-            notes.push("Os valores de origem e destino da transferência estão diferentes.");
-          }
-        }
+        importedRows.push(transferRow);
 
-        importedRows.push({
-          id: createRowId(),
-          rowType: "transfer",
-          selected: true,
-          description: currentRow.description || nextRow?.description || "Transferência",
-          date: currentRow.date || nextRow?.date || "",
-          amountInput: formatBRLInput(Math.abs(currentRow.value || nextRow?.value || 0)),
-          fromAccountId: findMatchingAccountId(currentRow.accountName, sortedAccounts),
-          toAccountId: findMatchingAccountId(nextRow?.accountName ?? "", sortedAccounts),
-          originalFromAccountName: currentRow.accountName,
-          originalToAccountName: nextRow?.accountName ?? "",
-          notes,
-          sourceLabel: shouldConsumeNextRow
-            ? `Linhas ${currentRow.sourceLine} e ${nextRow.sourceLine}`
-            : `Linha ${currentRow.sourceLine}`,
-        });
-
-        if (shouldConsumeNextRow) {
+        if (nextRow?.isTransfer) {
           index += 1;
         }
 
         continue;
       }
 
-      importedRows.push({
-        id: createRowId(),
-        rowType: "regular",
-        selected: true,
-        description: currentRow.description,
-        date: currentRow.date,
-        amountInput: formatBRLInputSigned(currentRow.value),
-        categoryId: findMatchingCategoryId(currentRow.categoryName, sortedCategories),
-        accountId: findMatchingAccountId(currentRow.accountName, sortedAccounts),
-        originalCategoryName: currentRow.categoryName,
-        originalAccountName: currentRow.accountName,
-        notes: [],
-        sourceLabel: `Linha ${currentRow.sourceLine}`,
-      });
+      importedRows.push(buildRegularImportRow(currentRow, sortedAccounts, sortedCategories, keywords));
     }
 
     return importedRows;
   }
 
   function mapDocumentRowsToImportRows(parsedRows: ParsedDocumentRow[]): ImportRow[] {
-    return parsedRows.map((row) => ({
-      id: createRowId(),
-      rowType: "regular",
-      selected: true,
-      description: row.description,
-      date: row.date,
-      amountInput: formatBRLInputSigned(-Math.abs(row.value)),
-      categoryId: "",
-      accountId: "",
-      originalCategoryName: "",
-      originalAccountName: "",
-      notes: [],
-      sourceLabel: `Item ${row.sourceLine}`,
-    }));
+    return parsedRows.map((row) =>
+      applyKeywordMappingToRegularRow({
+        id: createRowId(),
+        rowType: "regular",
+        selected: true,
+        description: row.description,
+        date: row.date,
+        amountInput: formatBRLInputSigned(-Math.abs(row.value)),
+        categoryId: "",
+        accountId: "",
+        originalCategoryName: "",
+        originalAccountName: "",
+        notes: [],
+        sourceLabel: `Item ${row.sourceLine}`,
+      }, keywords, sortedAccounts, sortedCategories)
+    );
+  }
+
+  async function persistImportedKeywords(successIds: Set<string>) {
+    const regularRows = rows.filter(
+      (row): row is RegularImportRow => row.rowType === "regular" && successIds.has(row.id),
+    );
+
+    if (regularRows.length === 0) {
+      return;
+    }
+
+    const payloads = regularRows
+      .map((row) => {
+        const keyword = row.description.trim();
+        const selectedCategory = activeCategories.find((category) => category.id === row.categoryId);
+        const selectedAccount = activeAccounts.find((account) => account.id === row.accountId);
+
+        if (!keyword || !selectedCategory || !selectedAccount) {
+          return null;
+        }
+
+        return {
+          keyword,
+          categoryId: selectedCategory.id,
+          categoryName: selectedCategory.name,
+          accountId: selectedAccount.id,
+          accountName: selectedAccount.name,
+        };
+      })
+      .filter((payload): payload is NonNullable<typeof payload> => payload !== null);
+
+    if (payloads.length === 0) {
+      return;
+    }
+
+    try {
+      await upsertKeywordsBatch(payloads);
+    } catch (error) {
+      console.error("Erro ao salvar keywords da importacao em lote:", error);
+    }
   }
 
   async function parseExcelFile(file: File) {
@@ -840,6 +967,7 @@ export default function ImportTransactionsAction({
       if (successIds.size > 0) {
         await reloadLaunches();
         await reloadAccounts();
+        await persistImportedKeywords(successIds);
       }
     } finally {
       setIsImporting(false);
@@ -994,7 +1122,7 @@ export default function ImportTransactionsAction({
                         )
                       }
                     />
-                    Todos
+                    <span>Todos</span>
                   </label>
                 </div>
                 <div className="import-transactions-grid-cell">Tipo</div>
@@ -1158,15 +1286,7 @@ export default function ImportTransactionsAction({
                           }}
                           getLabel={(account) => account.name}
                           getId={(account) => account.id}
-                          placeholder={
-                            row.rowType === "transfer"
-                              ? row.originalFromAccountName
-                                ? `Origem: ${row.originalFromAccountName}`
-                                : "Buscar conta origem..."
-                              : row.originalAccountName
-                                ? `Mapear: ${row.originalAccountName}`
-                                : "Buscar conta..."
-                          }
+                          placeholder={getAccountPlaceholder(row)}
                         />
                         {row.rowType === "transfer" && !row.fromAccountId && row.originalFromAccountName.trim() && (
                           <button
