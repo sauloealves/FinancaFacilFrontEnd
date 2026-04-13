@@ -10,6 +10,7 @@ import CategoryModal from "../categories/CategoryModal";
 import { createCategory } from "../../services/categoryService";
 import { createTransaction } from "../../services/launchService";
 import { maskBRLInput, parseBRL } from "../../utils/currency";
+import { getTodayLocalDate } from "../../utils/date";
 import "./TransferModal.css";
 
 type TransferModalProps = {
@@ -74,6 +75,7 @@ export default function TransferModal({ isOpen, onClose }: Readonly<TransferModa
     setForm(prev => ({
       ...prev,
       toAccount: selectedSidebarAccountId,
+      startDate: prev.startDate || getTodayLocalDate(),
     }));
   }, [isOpen, selectedSidebarAccountId]);
 

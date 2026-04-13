@@ -3,6 +3,7 @@ import "./EditLaunchModal.css";
 import type { LaunchRow } from "./types";
 
 import { useCategories } from "../../contexts/categories/useCategories";
+import { useKeywords } from "../../contexts/keywords/useKeywords";
 import { createCategory } from "../../services/categoryService";
 import CategoryModal from "../categories/CategoryModal";
 import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
@@ -13,6 +14,7 @@ import { isTransactionType } from "../../utils/sortUtils";
 import { Button, Input, Modal } from "../../components/ui";
 import { updateLaunch as updateLaunchAPI } from "../../services/launchService";
 import type { DeleteLaunchScope } from "../../services/launchService";
+import { findKeywordMatch } from "./keywordMatcher";
 
 
 type Props = {
@@ -38,6 +40,7 @@ export default function EditLaunchModal({
     const [submitError, setSubmitError] = useState<string>("");
     const { categories, addCategory, reloadCategories } = useCategories();
     const { accounts, addAccount, reloadAccounts } = useAccounts();
+    const { keywords, upsertKeyword } = useKeywords();
     const [showCategoryModal, setShowCategoryModal] = useState(false);
     const [showAccountModal, setShowAccountModal] = useState(false);
     const [showScopeModal, setShowScopeModal] = useState(false);
@@ -119,7 +122,8 @@ export default function EditLaunchModal({
         setIsSaving(true);
 
         updateLaunchAPI(launch.id, payload, scope)
-            .then((result) => {
+            .then(async (result) => {
+                await persistKeywordFromForm();
                 setShowScopeModal(false);
                 onSave(result);
             })
@@ -131,6 +135,49 @@ export default function EditLaunchModal({
             .finally(() => {
                 setIsSaving(false);
             });
+    }
+
+    async function persistKeywordFromForm() {
+        if (isTransactionType(type, "transfer")) {
+            return;
+        }
+
+        const keyword = description.trim();
+        const selectedCategory = categories.find((category) => category.id === categoryId);
+        const selectedAccount = accounts.find((account) => account.id === accountId);
+
+        if (!keyword || !selectedCategory || !selectedAccount) {
+            return;
+        }
+
+        try {
+            await upsertKeyword({
+                keyword,
+                categoryId: selectedCategory.id,
+                categoryName: selectedCategory.name,
+                accountId: selectedAccount.id,
+                accountName: selectedAccount.name,
+            });
+        } catch (error) {
+            console.error("Erro ao salvar keyword da edicao:", error);
+        }
+    }
+
+    function handleDescriptionChange(nextDescription: string) {
+        setDescription(nextDescription);
+
+        if (isTransactionType(type, "transfer")) {
+            return;
+        }
+
+        const matchedKeyword = findKeywordMatch(keywords, nextDescription);
+
+        if (!matchedKeyword) {
+            return;
+        }
+
+        setCategoryId(matchedKeyword.categoryId);
+        setAccountId(matchedKeyword.accountId);
     }
 
     function isValid(): boolean {
@@ -218,7 +265,7 @@ export default function EditLaunchModal({
                         label="Descrição"
                         className={descriptionFieldClassName}
                         value={description}
-                        onChange={e => setDescription(e.target.value)}
+                        onChange={e => handleDescriptionChange(e.target.value)}
                     />
 
                     {type !== "transfer" && (

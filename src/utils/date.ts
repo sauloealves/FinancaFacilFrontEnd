@@ -3,6 +3,12 @@
  * Não devem usar Date() diretamente (timezone)
  */
 
+export function getTodayLocalDate(): string {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 10);
+}
+
 export function formatDateBR(date: string): string {
   const normalizedDate = normalizeDateFromBackend(date);
   const [year, month, day] = normalizedDate.split("-");

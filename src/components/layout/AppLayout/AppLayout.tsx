@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { usePeriod } from "../../../contexts/usePeriodo";
 import { AccountFilterProvider } from "../../../contexts/AccountFilterContext";
 import { LaunchesProvider } from "../../../contexts/launches/LaunchesProvider";
+import { KeywordsProvider } from "../../../contexts/keywords/KeywordsProvider";
 
 const titles: Record<string, string> = {
   "/dashboard": "Dashboard",
@@ -52,39 +53,41 @@ export default function AppLayout() {
   }
 
   return (
-    <LaunchesProvider>
-      <AccountFilterProvider>
-        <div className="app-layout">
-          <Sidebar
-            isOpen={isSidebarOpen}
-            isCollapsed={isSidebarCollapsed}
-            onClose={() => setIsSidebarOpen(false)}
-          />
-
-          <button
-            type="button"
-            className={`app-sidebar-overlay ${isSidebarOpen ? "visible" : ""}`}
-            onClick={() => setIsSidebarOpen(false)}
-            aria-label="Fechar menu lateral"
-          />
-
-          <div className="app-main">
-            <Header
-              title={title}
-              month={shouldShowPeriodControls ? period.month : undefined}
-              periodMode={shouldShowPeriodControls ? period.mode : undefined}
-              onPeriodChange={period.setPeriod}
-              showImportAction={location.pathname === "/launches"}
-              isSidebarOpen={isSidebarOpen}
-              isSidebarCollapsed={isSidebarCollapsed}
-              onToggleSidebar={handleToggleSidebar}
+    <KeywordsProvider>
+      <LaunchesProvider>
+        <AccountFilterProvider>
+          <div className="app-layout">
+            <Sidebar
+              isOpen={isSidebarOpen}
+              isCollapsed={isSidebarCollapsed}
+              onClose={() => setIsSidebarOpen(false)}
             />
-            <main className="app-content">
-              <Outlet />
-            </main>
+
+            <button
+              type="button"
+              className={`app-sidebar-overlay ${isSidebarOpen ? "visible" : ""}`}
+              onClick={() => setIsSidebarOpen(false)}
+              aria-label="Fechar menu lateral"
+            />
+
+            <div className="app-main">
+              <Header
+                title={title}
+                month={shouldShowPeriodControls ? period.month : undefined}
+                periodMode={shouldShowPeriodControls ? period.mode : undefined}
+                onPeriodChange={period.setPeriod}
+                showImportAction={location.pathname === "/launches"}
+                isSidebarOpen={isSidebarOpen}
+                isSidebarCollapsed={isSidebarCollapsed}
+                onToggleSidebar={handleToggleSidebar}
+              />
+              <main className="app-content">
+                <Outlet />
+              </main>
+            </div>
           </div>
-        </div>
-      </AccountFilterProvider>
-    </LaunchesProvider>
+        </AccountFilterProvider>
+      </LaunchesProvider>
+    </KeywordsProvider>
   );
 }

@@ -3,6 +3,7 @@ import { Button, Input, Modal } from "../../components/ui";
 import SearchableSelect from "../../components/ui/SearchableSelect/SearchableSelect";
 import { useAccounts } from "../../contexts/accounts/useAccounts";
 import { useCategories } from "../../contexts/categories/useCategories";
+import { useKeywords } from "../../contexts/keywords/useKeywords";
 import { useLaunches } from "../../contexts/launches/useLaunches";
 import { createCategory } from "../../services/categoryService";
 import {
@@ -25,6 +26,7 @@ import type {
   FailedTransactionType,
 } from "./types";
 import "./FailedTransactionsModal.css";
+import { findKeywordMatch } from "./keywordMatcher";
 
 type ResolveFailedTransactionModalProps = {
   failedTransaction: FailedTransactionRow;
@@ -41,6 +43,7 @@ export default function ResolveFailedTransactionModal({
 }: Readonly<ResolveFailedTransactionModalProps>) {
   const { accounts, addAccount, reloadAccounts } = useAccounts();
   const { categories, addCategory, reloadCategories } = useCategories();
+  const { keywords, upsertKeyword } = useKeywords();
   const { reloadLaunches } = useLaunches();
   const [type, setType] = useState<FailedTransactionType>(failedTransaction.type);
   const [date, setDate] = useState(failedTransaction.date);
@@ -97,6 +100,7 @@ export default function ResolveFailedTransactionModal({
         startDate: date,
         occurrenceType: "single",
       });
+      await persistKeyword();
       await completeFailedTransaction(failedTransaction.id);
       await reloadLaunches();
       await reloadAccounts();
@@ -111,6 +115,40 @@ export default function ResolveFailedTransactionModal({
     } finally {
       setIsSubmitting(false);
     }
+  }
+
+  async function persistKeyword() {
+    const keyword = description.trim();
+    const selectedCategory = categories.find((category) => category.id === categoryId);
+    const selectedAccount = accounts.find((account) => account.id === accountId);
+
+    if (!keyword || !selectedCategory || !selectedAccount) {
+      return;
+    }
+
+    try {
+      await upsertKeyword({
+        keyword,
+        categoryId: selectedCategory.id,
+        categoryName: selectedCategory.name,
+        accountId: selectedAccount.id,
+        accountName: selectedAccount.name,
+      });
+    } catch (error) {
+      console.error("Erro ao salvar keyword do lançamento pendente:", error);
+    }
+  }
+
+  function handleDescriptionChange(nextDescription: string) {
+    setDescription(nextDescription);
+
+    const matchedKeyword = findKeywordMatch(keywords, nextDescription);
+    if (!matchedKeyword) {
+      return;
+    }
+
+    setCategoryId(matchedKeyword.categoryId);
+    setAccountId(matchedKeyword.accountId);
   }
 
   async function handleCreateCategory(data: { name: string; parentId?: string | null }) {
@@ -201,7 +239,7 @@ export default function ResolveFailedTransactionModal({
               label="Descrição"
               className={descriptionIsInvalid ? "invalid" : undefined}
               value={description}
-              onChange={(event) => setDescription(event.target.value)}
+              onChange={(event) => handleDescriptionChange(event.target.value)}
             />
 
             <div className="failed-transaction-inline-action">
