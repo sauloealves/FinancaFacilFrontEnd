@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart,
   Bar,
+  LabelList,
   Rectangle,
   XAxis,
   YAxis,
@@ -61,6 +62,30 @@ function ColoredExpenseBarShape(props: any) {
       radius={[0, 8, 8, 0]}
     />
   );
+}
+
+function createExpenseBarValueLabel(maxValue: number) {
+  return function ExpenseBarValueLabel(props: any) {
+    const value = Number(props.value ?? 0);
+    const formattedValue = formatCurrency(value);
+    const barEnd = Number(props.x ?? 0) + Number(props.width ?? 0);
+    const labelY = Number(props.y ?? 0) + Number(props.height ?? 0) / 2;
+    const shouldRenderInside = maxValue > 0 && value / maxValue >= 0.82;
+
+    return (
+      <text
+        x={shouldRenderInside ? barEnd - 10 : barEnd + 10}
+        y={labelY}
+        fill={shouldRenderInside ? "var(--text-inverse)" : "var(--gray-700)"}
+        fontSize={12}
+        fontWeight={600}
+        textAnchor={shouldRenderInside ? "end" : "start"}
+        dominantBaseline="middle"
+      >
+        {formattedValue}
+      </text>
+    );
+  };
 }
 
 const panelStyles = {
@@ -295,6 +320,11 @@ export default function ExpenseChart({
   }, [launches, month, maxItems, periodMode]);
 
   const chartHeight = Math.max(300, limitedExpensesByCategory.length * 56);
+  const maxCategoryValue = limitedExpensesByCategory[0]?.value ?? 0;
+  const renderExpenseBarValueLabel = useMemo(
+    () => createExpenseBarValueLabel(maxCategoryValue),
+    [maxCategoryValue]
+  );
 
   const handleChartMouseMove = useCallback((state: any) => {
     const activeIndex = Number(state?.activeTooltipIndex ?? state?.activeIndex);
@@ -370,7 +400,7 @@ export default function ExpenseChart({
         <BarChart
           data={limitedExpensesByCategory}
           layout="vertical"
-          margin={{ top: 12, right: 24, left: 8, bottom: 12 }}
+          margin={{ top: 12, right: 104, left: 8, bottom: 12 }}
           barCategoryGap={14}
           onMouseMove={handleChartMouseMove}
           onMouseLeave={handleChartMouseLeave}
@@ -391,14 +421,16 @@ export default function ExpenseChart({
             type="category"
             dataKey="name"
             tick={{ fontSize: 12 }}
-            width={120}
+            width={140}
           />
           <Bar
             dataKey="value"
             radius={[0, 8, 8, 0]}
             activeBar={{ fill: "rgba(15, 94, 148, 0.9)" }}
             shape={<ColoredExpenseBarShape />}
-          />
+          >
+            <LabelList dataKey="value" content={renderExpenseBarValueLabel} />
+          </Bar>
         </BarChart>
       </ResponsiveContainer>
 

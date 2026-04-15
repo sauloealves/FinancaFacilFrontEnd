@@ -92,12 +92,14 @@ function Sidebar({
 
           return (
             <Fragment key={item.path}>
+              <div className={`sidebar-group ${isGroupOpen ? "is-open" : ""}`}>
               <button
                 type="button"
                 className={`sidebar-item sidebar-group-toggle ${isGroupActive ? "active" : ""}`}
                 title={isCollapsed ? item.label : undefined}
                 onClick={() => toggleGroup(item.path)}
                 aria-expanded={isGroupOpen}
+                aria-haspopup="true"
               >
                 <span className="sidebar-item-icon" aria-hidden="true">
                   {menuIcons[item.path] ?? "•"}
@@ -109,7 +111,7 @@ function Sidebar({
               </button>
 
               {isGroupOpen && (
-                <div className="sidebar-submenu">
+                <div className={`sidebar-submenu ${isCollapsed ? "sidebar-submenu-popout" : ""}`}>
                   {item.children?.map((child) => (
                     <NavLink
                       key={child.path}
@@ -125,6 +127,7 @@ function Sidebar({
                   ))}
                 </div>
               )}
+              </div>
             </Fragment>
           );
         })}

@@ -194,6 +194,12 @@ function getDateRangeFromPeriod(monthText: string, mode: PeriodMode): GetTransac
   return { startDate, endDate };
 }
 
+function getLocalTodayDate(): string {
+  const now = new Date();
+  const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60_000);
+  return localDate.toISOString().slice(0, 10);
+}
+
 export default function DashboardPage() {
   const [open, setOpen] = useState(false);
   const [aiQuery, setAiQuery] = useState("");
@@ -201,6 +207,7 @@ export default function DashboardPage() {
   const [aiError, setAiError] = useState("");
   const [isAskingAi, setIsAskingAi] = useState(false);
   const [previousMonthLaunches, setPreviousMonthLaunches] = useState<LaunchRow[]>([]);
+  const [upcomingCommitmentLaunches, setUpcomingCommitmentLaunches] = useState<LaunchRow[]>([]);
   const [editingLaunch, setEditingLaunch] = useState<LaunchRow | null>(null);
   const { launches, reloadLaunches } = useLaunches();
   const { accounts, reloadAccounts } = useAccounts();
@@ -236,6 +243,31 @@ export default function DashboardPage() {
     };
   }, [month, mode]);
 
+  useEffect(() => {
+    let mounted = true;
+
+    async function loadUpcomingCommitments() {
+      try {
+        const data = await fetchLaunches({ startDate: getLocalTodayDate() });
+
+        if (mounted) {
+          setUpcomingCommitmentLaunches(data ?? []);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar próximos compromissos:", error);
+        if (mounted) {
+          setUpcomingCommitmentLaunches([]);
+        }
+      }
+    }
+
+    void loadUpcomingCommitments();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   const dashboardData = useMemo(() => {
     const filterLaunchesBySelectedAccounts = (sourceLaunches: LaunchRow[]) =>
       selectedAccounts.length === 0
@@ -251,11 +283,9 @@ export default function DashboardPage() {
             return selectedAccounts.includes(launch.account?.id ?? "");
           });
 
-    const now = new Date();
-    const currentDate = now.toISOString().split("T")[0];
-
     const filteredLaunches = filterLaunchesBySelectedAccounts(launches);
     const filteredPreviousMonthLaunches = filterLaunchesBySelectedAccounts(previousMonthLaunches);
+    const filteredUpcomingCommitmentLaunches = filterLaunchesBySelectedAccounts(upcomingCommitmentLaunches);
     const comparisonLaunches = [
       ...filteredPreviousMonthLaunches,
       ...filteredLaunches,
@@ -295,13 +325,9 @@ export default function DashboardPage() {
       .sort((a, b) => b.date.localeCompare(a.date))
       .slice(0, 3);
 
-    // Próximos compromissos (recorrentes ou com data futura)
-    const upcomingLaunches = filteredLaunches
-      .filter(l => {
-        const isRecurring = l.occurrenceType === "recurring";
-        const isFuture = l.date > currentDate;
-        return !isTransactionType(l.type, "transfer") && (isRecurring || isFuture);
-      })
+    // Próximos compromissos a partir da data atual
+    const upcomingLaunches = filteredUpcomingCommitmentLaunches
+      .filter((launch) => !isTransactionType(launch.type, "transfer"))
       .sort((a, b) => a.date.localeCompare(b.date))
       .slice(0, 3);
 
@@ -315,7 +341,7 @@ export default function DashboardPage() {
       filteredLaunches,
       comparisonLaunches,
     };
-  }, [launches, previousMonthLaunches, accounts, mode, month, selectedAccounts]);
+  }, [launches, previousMonthLaunches, upcomingCommitmentLaunches, accounts, mode, month, selectedAccounts]);
 
   const periodLabel = mode === "yearly" ? "ano" : "mês";
 
@@ -380,6 +406,7 @@ export default function DashboardPage() {
           onSave={async () => {
             await reloadLaunches();
             await reloadAccounts();
+            setUpcomingCommitmentLaunches(await fetchLaunches({ startDate: getLocalTodayDate() }));
             setEditingLaunch(null);
           }}
         />
