@@ -9,7 +9,7 @@ type NormalizeInput = {
   selectedAccounts?: string[];
 };
 
-function calculateRowBalanceImpact(
+export function calculateLaunchBalanceImpact(
   row: LaunchRow,
   selectedAccounts: string[],
 ): number {
@@ -75,7 +75,7 @@ export function normalizeLaunches({
         expenseTotal += row.value;
       }
 
-      dayBalanceImpact += calculateRowBalanceImpact(row, selectedAccounts);
+      dayBalanceImpact += calculateLaunchBalanceImpact(row, selectedAccounts);
     }
 
     runningBalance += dayBalanceImpact;

@@ -2,7 +2,7 @@ import axios from "axios";
 import { getStoredToken } from "../contexts/auth/authStorage";
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.trim();
-const baseURL = (apiBaseUrl && apiBaseUrl.length > 0 ? apiBaseUrl : "http://localhost:32768/api").replace(/\/+$/, "");
+const baseURL = (apiBaseUrl && apiBaseUrl.length > 0 ? apiBaseUrl : "http://localhost:32772/api").replace(/\/+$/, "");
 
 type ApiSuccessResponse<T> = {
   success: true;

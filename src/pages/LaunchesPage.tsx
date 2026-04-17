@@ -1,12 +1,15 @@
 import { useState, useEffect } from "react";
 import LaunchTable from "../features/launches/LauncheTable";
-import { normalizeLaunches } from "../features/launches/normalizeLaunches";
+import LaunchSpreadsheetView from "../features/launches/LaunchSpreadsheetView";
+import { calculateLaunchBalanceImpact, normalizeLaunches } from "../features/launches/normalizeLaunches";
+import { persistLaunchViewMode, resolveStoredLaunchViewMode } from "../features/launches/viewModeCookie";
 import { usePeriod } from "../contexts/usePeriodo";
 import EditLaunchModal from "../features/launches/EditLaunchModal";
 import { useAccountFilter } from "../contexts/AccountFilterContext";
-import type { LaunchRow, LaunchSortField } from "../features/launches/types";
+import type { LaunchRow, LaunchSortField, LaunchViewMode } from "../features/launches/types";
 import { useLaunches } from "../contexts/launches/useLaunches";
 import { useAccounts } from "../contexts/accounts/useAccounts";
+import { useAuth } from "../contexts/auth/AuthContext";
 import { isTransactionType } from "../utils/sortUtils";
 import { Button, Modal } from "../components/ui";
 import {
@@ -15,6 +18,8 @@ import {
   type DeleteLaunchScope,
 } from "../services/launchService";
 import "./LaunchesPage.css";
+
+type LaunchDisplayRow = LaunchRow & { runningBalance: number };
 
 function isSeriesLaunch(row: LaunchRow) {
   return row.occurrenceType === "installment" || row.occurrenceType === "recurring";
@@ -167,7 +172,9 @@ function getDeleteModalMessage(
  */
 export default function LaunchesPage() {
   const { month, mode, year } = usePeriod();
+  const { user } = useAuth();
   const [editing, setEditing] = useState<LaunchRow | null>(null);
+  const [viewMode, setViewMode] = useState<LaunchViewMode>(() => resolveStoredLaunchViewMode());
   const [pendingDelete, setPendingDelete] = useState<LaunchRow | null>(null);
   const [isBatchDeleteOpen, setIsBatchDeleteOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
@@ -180,6 +187,15 @@ export default function LaunchesPage() {
   const { selectedAccounts } = useAccountFilter();
   const { launches, reloadLaunches } = useLaunches();
   const { reloadAccounts } = useAccounts();
+  const userIdentity = user?.id || user?.email || null;
+
+  useEffect(() => {
+    setViewMode(resolveStoredLaunchViewMode(userIdentity));
+  }, [userIdentity]);
+
+  useEffect(() => {
+    persistLaunchViewMode(viewMode, userIdentity);
+  }, [viewMode, userIdentity]);
 
   useEffect(() => {
     const loadBalance = async () => {
@@ -224,12 +240,26 @@ export default function LaunchesPage() {
     selectedAccounts,
   });
 
+  let runningBalance = tableData.openingBalance;
+
   const sortedTableData = {
     ...tableData,
-    days: tableData.days.map((day) => ({
-      ...day,
-      rows: sortDayRows(day.rows, sortField),
-    })),
+    days: tableData.days.map((day) => {
+      const rows = sortDayRows(day.rows, sortField).map((row) => {
+        runningBalance += calculateLaunchBalanceImpact(row, selectedAccounts);
+
+        return {
+          ...row,
+          runningBalance,
+        } satisfies LaunchDisplayRow;
+      });
+
+      return {
+        ...day,
+        rows,
+        dayBalance: rows.at(-1)?.runningBalance ?? day.dayBalance,
+      };
+    }),
   };
 
   const visibleRows = sortedTableData.days.flatMap((day) => day.rows);
@@ -360,28 +390,55 @@ export default function LaunchesPage() {
     isSeriesDelete,
     selectedRows.length,
   );
+  const launchesView = viewMode === "grouped" ? (
+    <LaunchTable
+      data={sortedTableData}
+      sortField={sortField}
+      onSortFieldChange={setSortField}
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      selectedCount={selectedRows.length}
+      allVisibleSelected={allVisibleSelected}
+      onToggleSelectAllVisible={handleToggleSelectAllVisible}
+      onClearSelection={handleClearSelection}
+      onDeleteSelected={handleDeleteSelected}
+      ignoreHistoricalBalance={ignoreHistoricalBalance}
+      onIgnoreHistoricalBalanceChange={setIgnoreHistoricalBalance}
+      selectedLaunchIds={selectedLaunchIds}
+      onToggleLaunchSelection={handleToggleLaunchSelection}
+      onEdit={(row) => setEditing(row)}
+      onDelete={handleDelete}
+    />
+  ) : (
+    <LaunchSpreadsheetView
+      month={sortedTableData.month}
+      openingBalance={sortedTableData.openingBalance}
+      rows={visibleRows}
+      selectedAccounts={selectedAccounts}
+      sortField={sortField}
+      onSortFieldChange={setSortField}
+      viewMode={viewMode}
+      onViewModeChange={setViewMode}
+      selectedCount={selectedRows.length}
+      allVisibleSelected={allVisibleSelected}
+      onToggleSelectAllVisible={handleToggleSelectAllVisible}
+      onClearSelection={handleClearSelection}
+      onDeleteSelected={handleDeleteSelected}
+      ignoreHistoricalBalance={ignoreHistoricalBalance}
+      onIgnoreHistoricalBalanceChange={setIgnoreHistoricalBalance}
+      selectedLaunchIds={selectedLaunchIds}
+      onToggleLaunchSelection={handleToggleLaunchSelection}
+      onEdit={(row) => setEditing(row)}
+      onDelete={handleDelete}
+    />
+  );
 
   return (
     <div className="launches-page">
       {loadingBalance ? (
         <div style={{ padding: "20px", textAlign: "center" }}>Carregando saldo inicial...</div>
       ) : (
-        <LaunchTable
-          data={sortedTableData}
-          sortField={sortField}
-          onSortFieldChange={setSortField}
-          selectedCount={selectedRows.length}
-          allVisibleSelected={allVisibleSelected}
-          onToggleSelectAllVisible={handleToggleSelectAllVisible}
-          onClearSelection={handleClearSelection}
-          onDeleteSelected={handleDeleteSelected}
-          ignoreHistoricalBalance={ignoreHistoricalBalance}
-          onIgnoreHistoricalBalanceChange={setIgnoreHistoricalBalance}
-          selectedLaunchIds={selectedLaunchIds}
-          onToggleLaunchSelection={handleToggleLaunchSelection}
-          onEdit={(row) => setEditing(row)}
-          onDelete={handleDelete}
-        />
+        launchesView
       )}
       {editing && (
         <EditLaunchModal
