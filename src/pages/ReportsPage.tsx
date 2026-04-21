@@ -1,10 +1,12 @@
 import { Fragment, useEffect, useMemo, useState } from "react";
+import type { JSX } from "react";
 import { useAccountFilter } from "../contexts/AccountFilterContext";
 import { useAccounts } from "../contexts/accounts/useAccounts";
 import { useCategories } from "../contexts/categories/useCategories";
 import { getLaunches } from "../services/launchService";
 import { normalizeDateFromBackend } from "../utils/date";
 import { isTransactionType } from "../utils/sortUtils";
+import type { Category } from "../features/categories/types";
 import type { LaunchRow } from "../features/launches/types";
 import "./ReportsPage.css";
 
@@ -16,13 +18,21 @@ type ReportRecord = {
   type: ReportType;
   category: string;
   subcategory: string;
+  item: string;
   amount: number;
+};
+
+type ReportItemSummary = {
+  item: string;
+  byMonth: Record<string, number>;
+  total: number;
 };
 
 type CategorySummary = {
   category: string;
   subcategories: Array<{
     subcategory: string;
+    items: ReportItemSummary[];
     byMonth: Record<string, number>;
     total: number;
   }>;
@@ -92,6 +102,65 @@ function normalizeReportLabel(text: string, fallback: string): string {
   return normalizedText || fallback;
 }
 
+function getCategoryLineage(categoryId: string | undefined, categories: Category[]): string[] {
+  if (!categoryId) {
+    return [];
+  }
+
+  const lineage: string[] = [];
+  const seen = new Set<string>();
+  let currentId: string | undefined = categoryId;
+
+  while (currentId && !seen.has(currentId)) {
+    seen.add(currentId);
+    const currentCategory = categories.find((category) => category.id === currentId);
+
+    if (!currentCategory) {
+      break;
+    }
+
+    lineage.unshift(normalizeReportLabel(currentCategory.name, "Sem Categoria"));
+    currentId = currentCategory.parentId ?? undefined;
+  }
+
+  return lineage;
+}
+
+function resolveReportGrouping(
+  categoryId: string | undefined,
+  categoryName: string | undefined,
+  description: string | undefined,
+  categories: Category[]
+): { category: string; subcategory: string; item: string } {
+  const fallbackCategory = normalizeReportLabel(categoryName ?? "", "Sem Categoria");
+  const normalizedDescription = normalizeReportLabel(description ?? "", "Sem Subcategoria");
+  const lineage = getCategoryLineage(categoryId, categories);
+
+  if (lineage.length === 0) {
+    return {
+      category: fallbackCategory,
+      subcategory: "Sem Subcategoria",
+      item: normalizedDescription,
+    };
+  }
+
+  if (lineage.length === 1) {
+    return {
+      category: lineage[0],
+      subcategory: "Sem Subcategoria",
+      item: normalizedDescription,
+    };
+  }
+
+  const childPath = lineage.slice(1).join(" > ");
+
+  return {
+    category: lineage[0],
+    subcategory: childPath,
+    item: normalizedDescription,
+  };
+}
+
 function normalizeStartDate(date: string): string {
   return `${date.slice(0, 7)}-01`;
 }
@@ -124,6 +193,10 @@ function getCategoryKey(section: "income" | "expense", category: string): string
   return `${section}:${category}`;
 }
 
+function getSubcategoryKey(section: "income" | "expense", category: string, subcategory: string): string {
+  return `${section}:${category}:${subcategory}`;
+}
+
 function serializeCsvCell(cell: string | number): string {
   if (typeof cell === "number") {
     // Sem aspas para o Excel interpretar como numero; decimal com virgula para locale pt-BR.
@@ -141,41 +214,60 @@ function createZeroMonthMap(monthKeys: string[]): Record<string, number> {
 }
 
 function addRecordToCategoryMap(
-  categoryMap: Map<string, Map<string, Record<string, number>>>,
+  categoryMap: Map<string, Map<string, Map<string, Record<string, number>>>>,
   record: ReportRecord
 ): void {
   const monthKey = monthKeyFromDate(record.date);
-  const subMap = categoryMap.get(record.category) ?? new Map<string, Record<string, number>>();
-  const monthBucket = subMap.get(record.subcategory) ?? {};
+  const subMap = categoryMap.get(record.category) ?? new Map<string, Map<string, Record<string, number>>>();
+  const itemMap = subMap.get(record.subcategory) ?? new Map<string, Record<string, number>>();
+  const monthBucket = itemMap.get(record.item) ?? {};
 
   monthBucket[monthKey] = (monthBucket[monthKey] || 0) + record.amount;
-  subMap.set(record.subcategory, monthBucket);
+  itemMap.set(record.item, monthBucket);
+  subMap.set(record.subcategory, itemMap);
   categoryMap.set(record.category, subMap);
 }
 
 function buildCategorySummary(
   categoryName: string,
-  subMap: Map<string, Record<string, number>>,
+  subMap: Map<string, Map<string, Record<string, number>>>,
   monthKeys: string[],
   sectionByMonth: Record<string, number>
 ): CategorySummary {
   const categoryByMonth = createZeroMonthMap(monthKeys);
   const subcategories: CategorySummary["subcategories"] = [];
 
-  for (const [subcategoryName, byMonthRaw] of subMap.entries()) {
+  for (const [subcategoryName, itemMap] of subMap.entries()) {
     const byMonth = createZeroMonthMap(monthKeys);
+    const items: ReportItemSummary[] = [];
     let subTotal = 0;
 
-    for (const key of monthKeys) {
-      const value = byMonthRaw[key] || 0;
-      byMonth[key] = value;
-      subTotal += value;
-      categoryByMonth[key] += value;
-      sectionByMonth[key] += value;
+    for (const [itemName, byMonthRaw] of itemMap.entries()) {
+      const itemByMonth = createZeroMonthMap(monthKeys);
+      let itemTotal = 0;
+
+      for (const key of monthKeys) {
+        const value = byMonthRaw[key] || 0;
+        itemByMonth[key] = value;
+        itemTotal += value;
+        byMonth[key] += value;
+        categoryByMonth[key] += value;
+        sectionByMonth[key] += value;
+      }
+
+      subTotal += itemTotal;
+      items.push({
+        item: itemName,
+        byMonth: itemByMonth,
+        total: itemTotal,
+      });
     }
+
+    items.sort((a, b) => a.item.localeCompare(b.item));
 
     subcategories.push({
       subcategory: subcategoryName,
+      items,
       byMonth,
       total: subTotal,
     });
@@ -195,7 +287,7 @@ function summarizeByCategory(
   records: ReportRecord[],
   monthKeys: string[]
 ): { categories: CategorySummary[]; sectionByMonth: Record<string, number>; sectionTotal: number } {
-  const categoryMap = new Map<string, Map<string, Record<string, number>>>();
+  const categoryMap = new Map<string, Map<string, Map<string, Record<string, number>>>>();
 
   for (const record of records) {
     addRecordToCategoryMap(categoryMap, record);
@@ -231,6 +323,7 @@ export default function ReportsPage() {
     expense: true,
   });
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
+  const [expandedSubcategories, setExpandedSubcategories] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     let mounted = true;
@@ -264,14 +357,24 @@ export default function ReportsPage() {
           .filter(
             (launch) => isTransactionType(launch.type, "income") || isTransactionType(launch.type, "expense")
           )
-          .map((launch) => ({
-            id: launch.id,
-            date: launch.date,
-            type: launch.type as ReportType,
-            category: normalizeReportLabel(launch.category?.name ?? "", "Sem Categoria"),
-            subcategory: normalizeReportLabel(launch.description ?? "", "Sem Subcategoria"),
-            amount: Math.abs(launch.value),
-          }));
+          .map((launch) => {
+            const grouping = resolveReportGrouping(
+              launch.category?.id,
+              launch.category?.name,
+              launch.description,
+              categories
+            );
+
+            return {
+              id: launch.id,
+              date: launch.date,
+              type: launch.type as ReportType,
+              category: grouping.category,
+              subcategory: grouping.subcategory,
+              item: grouping.item,
+              amount: Math.abs(launch.value),
+            };
+          });
 
         if (mounted) {
           setReportRecords(records);
@@ -351,6 +454,9 @@ export default function ReportsPage() {
       rows.push([`  ${category.category}`, category.total, ...reportData.monthKeys.map((m) => category.byMonth[m] || 0)]);
       for (const sub of category.subcategories) {
         rows.push([`    ${sub.subcategory}`, sub.total, ...reportData.monthKeys.map((m) => sub.byMonth[m] || 0)]);
+        for (const item of sub.items) {
+          rows.push([`      ${item.item}`, item.total, ...reportData.monthKeys.map((m) => item.byMonth[m] || 0)]);
+        }
       }
     }
 
@@ -359,6 +465,9 @@ export default function ReportsPage() {
       rows.push([`  ${category.category}`, category.total, ...reportData.monthKeys.map((m) => category.byMonth[m] || 0)]);
       for (const sub of category.subcategories) {
         rows.push([`    ${sub.subcategory}`, sub.total, ...reportData.monthKeys.map((m) => sub.byMonth[m] || 0)]);
+        for (const item of sub.items) {
+          rows.push([`      ${item.item}`, item.total, ...reportData.monthKeys.map((m) => item.byMonth[m] || 0)]);
+        }
       }
     }
 
@@ -412,6 +521,91 @@ export default function ReportsPage() {
       ...prev,
       [key]: !(prev[key] ?? true),
     }));
+  }
+
+  function isSubcategoryExpanded(section: "income" | "expense", category: string, subcategory: string): boolean {
+    const key = getSubcategoryKey(section, category, subcategory);
+    return expandedSubcategories[key] ?? true;
+  }
+
+  function toggleSubcategory(section: "income" | "expense", category: string, subcategory: string) {
+    const key = getSubcategoryKey(section, category, subcategory);
+    setExpandedSubcategories((prev) => ({
+      ...prev,
+      [key]: !(prev[key] ?? true),
+    }));
+  }
+
+  function renderSubcategoryRows(
+    section: "income" | "expense",
+    category: CategorySummary,
+    sub: CategorySummary["subcategories"][number]
+  ): JSX.Element {
+    return (
+      <Fragment key={`${section}-sub-${category.category}-${sub.subcategory}`}>
+        <tr className="subcategory-row">
+          <td>
+            <button
+              type="button"
+              className="subcategory-toggle"
+              aria-expanded={isSubcategoryExpanded(section, category.category, sub.subcategory)}
+              onClick={() => toggleSubcategory(section, category.category, sub.subcategory)}
+            >
+              <span className="subcategory-toggle-icon">
+                {isSubcategoryExpanded(section, category.category, sub.subcategory) ? "-" : "+"}
+              </span>
+              <span>{sub.subcategory}</span>
+            </button>
+          </td>
+          <td>{formatCurrency(sub.total)}</td>
+          {reportData.monthKeys.map((monthKey) => (
+            <td key={`${section}-sub-${category.category}-${sub.subcategory}-${monthKey}`}>
+              {formatCurrency(sub.byMonth[monthKey] || 0)}
+            </td>
+          ))}
+        </tr>
+        {isSubcategoryExpanded(section, category.category, sub.subcategory) && sub.items.map((item) => (
+          <tr className="report-item-row" key={`${section}-item-${category.category}-${sub.subcategory}-${item.item}`}>
+            <td>{item.item}</td>
+            <td>{formatCurrency(item.total)}</td>
+            {reportData.monthKeys.map((monthKey) => (
+              <td key={`${section}-item-${category.category}-${sub.subcategory}-${item.item}-${monthKey}`}>
+                {formatCurrency(item.byMonth[monthKey] || 0)}
+              </td>
+            ))}
+          </tr>
+        ))}
+      </Fragment>
+    );
+  }
+
+  function renderCategoryRows(section: "income" | "expense", categoriesToRender: CategorySummary[]): JSX.Element[] {
+    return categoriesToRender.map((category) => (
+      <Fragment key={`${section}-${category.category}`}>
+        <tr className="category-row" key={`${section}-category-${category.category}`}>
+          <td>
+            <button
+              type="button"
+              className="category-toggle"
+              aria-expanded={isCategoryExpanded(section, category.category)}
+              onClick={() => toggleCategory(section, category.category)}
+            >
+              <span className="category-toggle-icon">
+                {isCategoryExpanded(section, category.category) ? "-" : "+"}
+              </span>
+              <span>{category.category}</span>
+            </button>
+          </td>
+          <td>{formatCurrency(category.total)}</td>
+          {reportData.monthKeys.map((monthKey) => (
+            <td key={`${section}-category-${category.category}-${monthKey}`}>
+              {formatCurrency(category.byMonth[monthKey] || 0)}
+            </td>
+          ))}
+        </tr>
+        {isCategoryExpanded(section, category.category) && category.subcategories.map((sub) => renderSubcategoryRows(section, category, sub))}
+      </Fragment>
+    ));
   }
 
   return (
@@ -494,42 +688,7 @@ export default function ReportsPage() {
               ))}
             </tr>
 
-            {expandedSections.income && reportData.incomes.categories.map((category) => (
-              <Fragment key={`income-${category.category}`}>
-                <tr className="category-row" key={`income-category-${category.category}`}>
-                  <td>
-                    <button
-                      type="button"
-                      className="category-toggle"
-                      aria-expanded={isCategoryExpanded("income", category.category)}
-                      onClick={() => toggleCategory("income", category.category)}
-                    >
-                      <span className="category-toggle-icon">
-                        {isCategoryExpanded("income", category.category) ? "-" : "+"}
-                      </span>
-                      <span>{category.category}</span>
-                    </button>
-                  </td>
-                  <td>{formatCurrency(category.total)}</td>
-                  {reportData.monthKeys.map((monthKey) => (
-                    <td key={`income-category-${category.category}-${monthKey}`}>
-                      {formatCurrency(category.byMonth[monthKey] || 0)}
-                    </td>
-                  ))}
-                </tr>
-                {isCategoryExpanded("income", category.category) && category.subcategories.map((sub) => (
-                  <tr className="subcategory-row" key={`income-sub-${category.category}-${sub.subcategory}`}>
-                    <td>{sub.subcategory}</td>
-                    <td>{formatCurrency(sub.total)}</td>
-                    {reportData.monthKeys.map((monthKey) => (
-                      <td key={`income-sub-${category.category}-${sub.subcategory}-${monthKey}`}>
-                        {formatCurrency(sub.byMonth[monthKey] || 0)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </Fragment>
-            ))}
+            {expandedSections.income && renderCategoryRows("income", reportData.incomes.categories)}
 
             <tr className="section-row expense">
               <td>
@@ -549,42 +708,7 @@ export default function ReportsPage() {
               ))}
             </tr>
 
-            {expandedSections.expense && reportData.expenses.categories.map((category) => (
-              <Fragment key={`expense-${category.category}`}>
-                <tr className="category-row" key={`expense-category-${category.category}`}>
-                  <td>
-                    <button
-                      type="button"
-                      className="category-toggle"
-                      aria-expanded={isCategoryExpanded("expense", category.category)}
-                      onClick={() => toggleCategory("expense", category.category)}
-                    >
-                      <span className="category-toggle-icon">
-                        {isCategoryExpanded("expense", category.category) ? "-" : "+"}
-                      </span>
-                      <span>{category.category}</span>
-                    </button>
-                  </td>
-                  <td>{formatCurrency(category.total)}</td>
-                  {reportData.monthKeys.map((monthKey) => (
-                    <td key={`expense-category-${category.category}-${monthKey}`}>
-                      {formatCurrency(category.byMonth[monthKey] || 0)}
-                    </td>
-                  ))}
-                </tr>
-                {isCategoryExpanded("expense", category.category) && category.subcategories.map((sub) => (
-                  <tr className="subcategory-row" key={`expense-sub-${category.category}-${sub.subcategory}`}>
-                    <td>{sub.subcategory}</td>
-                    <td>{formatCurrency(sub.total)}</td>
-                    {reportData.monthKeys.map((monthKey) => (
-                      <td key={`expense-sub-${category.category}-${sub.subcategory}-${monthKey}`}>
-                        {formatCurrency(sub.byMonth[monthKey] || 0)}
-                      </td>
-                    ))}
-                  </tr>
-                ))}
-              </Fragment>
-            ))}
+            {expandedSections.expense && renderCategoryRows("expense", reportData.expenses.categories)}
 
             <tr className="balance-row">
               <td>Saldo</td>

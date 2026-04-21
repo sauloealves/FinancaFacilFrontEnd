@@ -212,6 +212,35 @@
   color: #4c5b6b;
 }
 
+.subcategory-row {
+  background: #fcfdff;
+}
+
+.subcategory-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none;
+  background: transparent;
+  padding: 0 0 0 24px;
+  font: inherit;
+  color: var(--gray-800);
+  cursor: pointer;
+}
+
+.subcategory-toggle-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 14px;
+  height: 14px;
+  border: 1px solid #a3b0bf;
+  border-radius: 3px;
+  font-size: 11px;
+  line-height: 1;
+  color: #607080;
+}
+
 :root[data-theme="dark"] .report-table thead th {
   background: #182235;
   border-bottom-color: var(--gray-300);
@@ -232,13 +261,34 @@
   color: #cfe0ff;
 }
 
+:root[data-theme="dark"] .subcategory-row {
+  background: #101a2a;
+}
+
+:root[data-theme="dark"] .subcategory-toggle {
+  color: #d7e3f4;
+}
+
+:root[data-theme="dark"] .subcategory-toggle-icon {
+  border-color: #7693b9;
+  color: #b7cbec;
+}
+
 :root[data-theme="dark"] .subcategory-row td:first-child {
   color: var(--gray-700);
 }
 
 .subcategory-row td:first-child {
-  padding-left: 24px;
   color: var(--gray-700);
+}
+
+.report-item-row td:first-child {
+  padding-left: 56px;
+  color: var(--gray-600);
+}
+
+:root[data-theme="dark"] .report-item-row td:first-child {
+  color: #9fb3cd;
 }
 
 .balance-row {
