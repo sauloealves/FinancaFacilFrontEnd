@@ -171,6 +171,21 @@ function normalizeEndDate(date: string): string {
   return `${date.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
 }
 
+function formatDateInputValue(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+function createDefaultReportDateRange(): { startDate: string; endDate: string } {
+  const today = new Date();
+  const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+  const startMonthEnd = new Date(today.getFullYear(), today.getMonth() - 5 + 1, 0);
+
+  return {
+    startDate: formatDateInputValue(startMonthEnd),
+    endDate: formatDateInputValue(currentMonthEnd),
+  };
+}
+
 function getMonthRange(startDate: string, endDate: string): string[] {
   const start = new Date(startDate);
   const end = new Date(endDate);
@@ -310,10 +325,11 @@ export default function ReportsPage() {
   const { selectedAccounts } = useAccountFilter();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
-  const [draftStartDate, setDraftStartDate] = useState("2025-11-01");
-  const [draftEndDate, setDraftEndDate] = useState("2026-03-31");
-  const [startDate, setStartDate] = useState("2025-11-01");
-  const [endDate, setEndDate] = useState("2026-03-31");
+  const defaultDateRange = useMemo(() => createDefaultReportDateRange(), []);
+  const [draftStartDate, setDraftStartDate] = useState(defaultDateRange.startDate);
+  const [draftEndDate, setDraftEndDate] = useState(defaultDateRange.endDate);
+  const [startDate, setStartDate] = useState(defaultDateRange.startDate);
+  const [endDate, setEndDate] = useState(defaultDateRange.endDate);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [reportRecords, setReportRecords] = useState<ReportRecord[]>([]);
   const [loading, setLoading] = useState(false);
