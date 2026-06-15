@@ -27,3 +27,7 @@
 .account-balance {
   font-weight: 600;
 }
+
+.account-balance.negative {
+  color: var(--sidebar-danger);
+}

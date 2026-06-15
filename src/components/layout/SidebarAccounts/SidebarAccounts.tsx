@@ -36,7 +36,9 @@ export default function SidebarAccounts() {
               {account.name}
             </span>
 
-            <span className="account-balance">
+            <span
+              className={`account-balance ${account.currentBalance < 0 ? "negative" : ""}`}
+            >
               {formatBRLInputSigned(
                 account.currentBalance ?? 0
               )}

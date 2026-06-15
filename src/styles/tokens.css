@@ -30,6 +30,7 @@
    --text-inverse: #FFFFFF;
    --sidebar-bg: #0F172A;
    --sidebar-text: #F8FAFC;
+   --sidebar-danger: #FCA5A5;
    --sidebar-border: #1F2937;
    --sidebar-hover: #1E293B;
    --shadow-color: rgba(15, 23, 42, 0.14);
@@ -95,6 +96,7 @@
    --text-inverse: #F8FAFC;
    --sidebar-bg: #020817;
    --sidebar-text: #E2E8F0;
+   --sidebar-danger: #FECACA;
    --sidebar-border: #162033;
    --sidebar-hover: #172235;
    --shadow-color: rgba(2, 8, 23, 0.34);

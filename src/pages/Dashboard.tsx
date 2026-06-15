@@ -5,6 +5,7 @@ import { useAccounts } from "../contexts/accounts/useAccounts";
 import { usePeriod } from "../contexts/usePeriodo";
 import { useAccountFilter } from "../contexts/AccountFilterContext";
 import { isTransactionType } from "../utils/sortUtils";
+import { calculateAccountCurrentBalance } from "../utils/calculateAccountCurrentBalance";
 import ExpenseChart from "../features/charts/ExpenseChart";
 import MonthlyComparisonChart from "../features/charts/MonthlyComparisonChart";
 import EditLaunchModal from "../features/launches/EditLaunchModal";
@@ -206,6 +207,7 @@ export default function DashboardPage() {
   const [aiResponse, setAiResponse] = useState("");
   const [aiError, setAiError] = useState("");
   const [isAskingAi, setIsAskingAi] = useState(false);
+  const [periodBalanceLaunches, setPeriodBalanceLaunches] = useState<LaunchRow[]>([]);
   const [previousMonthLaunches, setPreviousMonthLaunches] = useState<LaunchRow[]>([]);
   const [upcomingCommitmentLaunches, setUpcomingCommitmentLaunches] = useState<LaunchRow[]>([]);
   const [editingLaunch, setEditingLaunch] = useState<LaunchRow | null>(null);
@@ -217,6 +219,22 @@ export default function DashboardPage() {
 
   useEffect(() => {
     let mounted = true;
+
+    async function loadPeriodBalanceLaunches() {
+      try {
+        const { endDate } = getDateRangeFromPeriod(month, mode);
+        const data = await fetchLaunches({ endDate });
+
+        if (mounted) {
+          setPeriodBalanceLaunches(data ?? []);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar lançamentos para saldo final do período:", error);
+        if (mounted) {
+          setPeriodBalanceLaunches([]);
+        }
+      }
+    }
 
     async function loadPreviousMonthLaunches() {
       try {
@@ -236,6 +254,7 @@ export default function DashboardPage() {
       }
     }
 
+    void loadPeriodBalanceLaunches();
     void loadPreviousMonthLaunches();
 
     return () => {
@@ -284,6 +303,7 @@ export default function DashboardPage() {
           });
 
     const filteredLaunches = filterLaunchesBySelectedAccounts(launches);
+    const filteredPeriodBalanceLaunches = filterLaunchesBySelectedAccounts(periodBalanceLaunches);
     const filteredPreviousMonthLaunches = filterLaunchesBySelectedAccounts(previousMonthLaunches);
     const filteredUpcomingCommitmentLaunches = filterLaunchesBySelectedAccounts(upcomingCommitmentLaunches);
     const comparisonLaunches = [
@@ -297,9 +317,8 @@ export default function DashboardPage() {
         ? accounts
         : accounts.filter((account) => selectedAccounts.includes(account.id));
 
-    // Saldo Atual: soma de todos os saldos das contas
     const totalBalance = filteredAccounts.reduce(
-      (sum, acc) => sum + (acc.currentBalance || 0),
+      (sum, acc) => sum + calculateAccountCurrentBalance(acc, filteredPeriodBalanceLaunches),
       0
     );
 
@@ -341,7 +360,7 @@ export default function DashboardPage() {
       filteredLaunches,
       comparisonLaunches,
     };
-  }, [launches, previousMonthLaunches, upcomingCommitmentLaunches, accounts, mode, month, selectedAccounts]);
+  }, [launches, periodBalanceLaunches, previousMonthLaunches, upcomingCommitmentLaunches, accounts, mode, month, selectedAccounts]);
 
   const periodLabel = mode === "yearly" ? "ano" : "mês";
 
@@ -415,7 +434,7 @@ export default function DashboardPage() {
       <div className="dashboard">
         {/* KPI CARDS */}
         <div className="dashboard-kpis">
-          <Card title="Saldo Atual">
+          <Card title="Saldo Final Período">
             <span className="kpi-value">{formatCurrency(dashboardData.totalBalance)}</span>
           </Card>
 
