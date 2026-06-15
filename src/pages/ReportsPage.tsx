@@ -171,6 +171,11 @@ function normalizeEndDate(date: string): string {
   return `${date.slice(0, 7)}-${String(lastDay).padStart(2, "0")}`;
 }
 
+function parseYearMonth(date: string): { year: number; month: number } {
+  const [year, month] = date.slice(0, 7).split("-").map(Number);
+  return { year, month };
+}
+
 function formatDateInputValue(date: Date): string {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
 }
@@ -178,21 +183,21 @@ function formatDateInputValue(date: Date): string {
 function createDefaultReportDateRange(): { startDate: string; endDate: string } {
   const today = new Date();
   const currentMonthEnd = new Date(today.getFullYear(), today.getMonth() + 1, 0);
-  const startMonthEnd = new Date(today.getFullYear(), today.getMonth() - 5 + 1, 0);
+  const startMonthStart = new Date(today.getFullYear(), today.getMonth() - 5, 1);
 
   return {
-    startDate: formatDateInputValue(startMonthEnd),
+    startDate: formatDateInputValue(startMonthStart),
     endDate: formatDateInputValue(currentMonthEnd),
   };
 }
 
 function getMonthRange(startDate: string, endDate: string): string[] {
-  const start = new Date(startDate);
-  const end = new Date(endDate);
+  const start = parseYearMonth(startDate);
+  const end = parseYearMonth(endDate);
   const months: string[] = [];
 
-  const cursor = new Date(start.getFullYear(), start.getMonth(), 1);
-  const limit = new Date(end.getFullYear(), end.getMonth(), 1);
+  const cursor = new Date(start.year, start.month - 1, 1);
+  const limit = new Date(end.year, end.month - 1, 1);
 
   while (cursor <= limit) {
     months.push(
