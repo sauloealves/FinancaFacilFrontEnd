@@ -11,7 +11,7 @@
 /* KPI GRID */
 .dashboard-kpis {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: var(--space-3);
 }
 
@@ -35,8 +35,12 @@
 
 /* KPI VALUES */
 .kpi-value {
-  font-size: 24px;
+  font-size: clamp(20px, 2vw, 24px);
   font-weight: 600;
+}
+
+.dashboard-kpis .card {
+  min-width: 0;
 }
 
 .kpi-value.positive {

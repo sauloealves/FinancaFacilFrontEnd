@@ -317,7 +317,12 @@ export default function DashboardPage() {
         ? accounts
         : accounts.filter((account) => selectedAccounts.includes(account.id));
 
-    const totalBalance = filteredAccounts.reduce(
+    const currentBalance = filteredAccounts.reduce(
+      (sum, acc) => sum + (acc.currentBalance || 0),
+      0
+    );
+
+    const periodEndingBalance = filteredAccounts.reduce(
       (sum, acc) => sum + calculateAccountCurrentBalance(acc, filteredPeriodBalanceLaunches),
       0
     );
@@ -351,7 +356,8 @@ export default function DashboardPage() {
       .slice(0, 3);
 
     return {
-      totalBalance,
+      currentBalance,
+      periodEndingBalance,
       periodIncome,
       periodExpense,
       periodResult,
@@ -434,8 +440,12 @@ export default function DashboardPage() {
       <div className="dashboard">
         {/* KPI CARDS */}
         <div className="dashboard-kpis">
+          <Card title="Saldo Atual">
+            <span className="kpi-value">{formatCurrency(dashboardData.currentBalance)}</span>
+          </Card>
+
           <Card title="Saldo Final Período">
-            <span className="kpi-value">{formatCurrency(dashboardData.totalBalance)}</span>
+            <span className="kpi-value">{formatCurrency(dashboardData.periodEndingBalance)}</span>
           </Card>
 
           <Card title={`Entradas do ${periodLabel}`}>
