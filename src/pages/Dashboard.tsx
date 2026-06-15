@@ -442,11 +442,7 @@ export default function DashboardPage() {
         <div className="dashboard-kpis">
           <Card title="Saldo Atual">
             <span className="kpi-value">{formatCurrency(dashboardData.currentBalance)}</span>
-          </Card>
-
-          <Card title="Saldo Final Período">
-            <span className="kpi-value">{formatCurrency(dashboardData.periodEndingBalance)}</span>
-          </Card>
+          </Card>          
 
           <Card title={`Entradas do ${periodLabel}`}>
             <span className="kpi-value positive">{formatCurrency(dashboardData.periodIncome)}</span>
@@ -460,6 +456,10 @@ export default function DashboardPage() {
             <span className={`kpi-value ${dashboardData.periodResult >= 0 ? "positive" : "negative"}`}>
               {formatCurrency(dashboardData.periodResult)}
             </span>
+          </Card>
+          
+          <Card title="Saldo Final Período">
+            <span className="kpi-value">{formatCurrency(dashboardData.periodEndingBalance)}</span>
           </Card>
         </div>
 
