@@ -21,6 +21,7 @@ export function LaunchesProvider({
 }>) {
   const [failedTransactions, setFailedTransactions] = useState<FailedTransactionRow[]>([]);
   const [launches, setLaunches] = useState<LaunchRow[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
   const { month, mode, year } = usePeriod();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
@@ -123,6 +124,7 @@ export function LaunchesProvider({
 
   useEffect(() => {
     let mounted = true;
+    setIsLoading(true);
 
     const loadLaunches = async () => {
       try {
@@ -133,6 +135,8 @@ export function LaunchesProvider({
       } catch (err) {
         console.error(err);
         if (mounted) setLaunches([]);
+      } finally {
+        if (mounted) setIsLoading(false);
       }
     };
 
@@ -175,12 +179,13 @@ export function LaunchesProvider({
     () => ({
       failedTransactions,
       launches,
+      isLoading,
       removeFailedTransaction,
       reloadFailedTransactions,
       updateLaunch,
       reloadLaunches,
     }),
-    [failedTransactions, launches]
+    [failedTransactions, launches, isLoading]
   );
 
   return (

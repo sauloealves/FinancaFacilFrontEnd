@@ -207,18 +207,21 @@ export default function DashboardPage() {
   const [aiResponse, setAiResponse] = useState("");
   const [aiError, setAiError] = useState("");
   const [isAskingAi, setIsAskingAi] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [periodBalanceLaunches, setPeriodBalanceLaunches] = useState<LaunchRow[]>([]);
   const [previousMonthLaunches, setPreviousMonthLaunches] = useState<LaunchRow[]>([]);
   const [upcomingCommitmentLaunches, setUpcomingCommitmentLaunches] = useState<LaunchRow[]>([]);
   const [editingLaunch, setEditingLaunch] = useState<LaunchRow | null>(null);
-  const { launches, reloadLaunches } = useLaunches();
+  const { launches, reloadLaunches, isLoading: isLoadingLaunches } = useLaunches();
   const { accounts, reloadAccounts } = useAccounts();
   const { month, mode } = usePeriod();
   const { selectedAccounts } = useAccountFilter();
   const aiResponseBlocks = useMemo(() => parseAiResponse(aiResponse), [aiResponse]);
+  const isDashboardLoading = isLoading || isLoadingLaunches;
 
   useEffect(() => {
     let mounted = true;
+    setIsLoading(true);
 
     async function loadPeriodBalanceLaunches() {
       try {
@@ -254,8 +257,17 @@ export default function DashboardPage() {
       }
     }
 
-    void loadPeriodBalanceLaunches();
-    void loadPreviousMonthLaunches();
+    async function loadAll() {
+      await Promise.all([
+        loadPeriodBalanceLaunches(),
+        loadPreviousMonthLaunches(),
+      ]);
+      if (mounted) {
+        setIsLoading(false);
+      }
+    }
+
+    void loadAll();
 
     return () => {
       mounted = false;
@@ -437,7 +449,7 @@ export default function DashboardPage() {
         />
       )}
 
-      <div className="dashboard">
+      <div className={`dashboard${isDashboardLoading ? " dashboard--loading" : ""}`}>
         {/* KPI CARDS */}
         <div className="dashboard-kpis">
           <Card title="Saldo Atual">

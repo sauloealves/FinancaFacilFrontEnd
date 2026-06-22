@@ -51,6 +51,23 @@
   color: var(--danger);
 }
 
+/* LOADING STATE */
+.dashboard--loading .kpi-value,
+.dashboard--loading .list,
+.dashboard--loading .dashboard-charts-grid {
+  filter: blur(6px);
+  opacity: 0.5;
+  pointer-events: none;
+  user-select: none;
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
+.kpi-value,
+.list,
+.dashboard-charts-grid {
+  transition: filter 0.2s ease, opacity 0.2s ease;
+}
+
 /* LIST */
 .list {
   list-style: none;

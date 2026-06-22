@@ -7,6 +7,7 @@ import type {
 export type LaunchesContextType = {
   failedTransactions: FailedTransactionRow[];
   launches: LaunchRow[];
+  isLoading: boolean;
   removeFailedTransaction: (id: string) => void;
   reloadFailedTransactions: () => Promise<void>;
   updateLaunch: (updated: LaunchRow) => void;
