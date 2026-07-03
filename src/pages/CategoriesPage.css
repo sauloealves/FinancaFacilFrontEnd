@@ -15,9 +15,19 @@
   gap: 10px;
 }
 
+.category-tags-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.categories-tag-filter {
+  max-width: 360px;
+}
+
 .btn-primary {
   background: #2563eb;
-  color: white;
+  color: var(--text-inverse);
 
   border: none;
   padding: 8px 16px;
@@ -109,7 +119,7 @@
   border-radius: 6px;
   border: none;
   background: #10b981;
-  color: white;
+  color: #052e16;
   cursor: pointer;
 }
 

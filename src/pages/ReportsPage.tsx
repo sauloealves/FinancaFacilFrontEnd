@@ -1,13 +1,19 @@
-import { Fragment, useEffect, useMemo, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
 import { useAccountFilter } from "../contexts/AccountFilterContext";
 import { useAccounts } from "../contexts/accounts/useAccounts";
 import { useCategories } from "../contexts/categories/useCategories";
+import { useTags } from "../contexts/tags/useTags";
 import { getLaunches } from "../services/launchService";
 import { normalizeDateFromBackend } from "../utils/date";
 import { isTransactionType } from "../utils/sortUtils";
 import type { Category } from "../features/categories/types";
 import type { LaunchRow } from "../features/launches/types";
+import {
+  buildExplicitTagIdsByCategory,
+  buildParentByCategoryId,
+  categoryMatchesTagFilter,
+} from "../features/tags/tagInheritance";
 import "./ReportsPage.css";
 
 type ReportType = "income" | "expense";
@@ -16,6 +22,7 @@ type ReportRecord = {
   id: string;
   date: string; // YYYY-MM-DD
   type: ReportType;
+  categoryId?: string;
   category: string;
   subcategory: string;
   item: string;
@@ -330,11 +337,15 @@ export default function ReportsPage() {
   const { selectedAccounts } = useAccountFilter();
   const { accounts } = useAccounts();
   const { categories } = useCategories();
+  const { tags, tagsByCategory } = useTags();
   const defaultDateRange = useMemo(() => createDefaultReportDateRange(), []);
   const [draftStartDate, setDraftStartDate] = useState(defaultDateRange.startDate);
   const [draftEndDate, setDraftEndDate] = useState(defaultDateRange.endDate);
+  const [draftSelectedTagIds, setDraftSelectedTagIds] = useState<string[]>([]);
   const [startDate, setStartDate] = useState(defaultDateRange.startDate);
   const [endDate, setEndDate] = useState(defaultDateRange.endDate);
+  const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [reportRecords, setReportRecords] = useState<ReportRecord[]>([]);
   const [loading, setLoading] = useState(false);
@@ -343,8 +354,27 @@ export default function ReportsPage() {
     income: true,
     expense: true,
   });
+  const tagFilterRef = useRef<HTMLDetailsElement | null>(null);
   const [expandedCategories, setExpandedCategories] = useState<Record<string, boolean>>({});
   const [expandedSubcategories, setExpandedSubcategories] = useState<Record<string, boolean>>({});
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!isTagFilterOpen || !tagFilterRef.current) {
+        return;
+      }
+
+      if (event.target instanceof Node && !tagFilterRef.current.contains(event.target)) {
+        setIsTagFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isTagFilterOpen]);
 
   useEffect(() => {
     let mounted = true;
@@ -374,7 +404,20 @@ export default function ReportsPage() {
                 return selectedAccounts.includes(launch.account?.id ?? "");
               });
 
-        const records = accountFiltered
+        const parentByCategoryId = buildParentByCategoryId(categories);
+        const explicitTagIdsByCategory = buildExplicitTagIdsByCategory(tagsByCategory);
+        const selectedTagIdSet = new Set(selectedTagIds);
+
+        const tagFiltered = accountFiltered.filter((launch) =>
+          categoryMatchesTagFilter(
+            launch.category?.id,
+            selectedTagIdSet,
+            parentByCategoryId,
+            explicitTagIdsByCategory,
+          ),
+        );
+
+        const records = tagFiltered
           .filter(
             (launch) => isTransactionType(launch.type, "income") || isTransactionType(launch.type, "expense")
           )
@@ -390,6 +433,7 @@ export default function ReportsPage() {
               id: launch.id,
               date: launch.date,
               type: launch.type as ReportType,
+              categoryId: launch.category?.id,
               category: grouping.category,
               subcategory: grouping.subcategory,
               item: grouping.item,
@@ -418,7 +462,15 @@ export default function ReportsPage() {
     return () => {
       mounted = false;
     };
-  }, [startDate, endDate, selectedAccounts, accounts, categories]);
+  }, [
+    startDate,
+    endDate,
+    selectedAccounts,
+    selectedTagIds,
+    accounts,
+    categories,
+    tagsByCategory,
+  ]);
 
   const reportData = useMemo(() => {
     const normalizedStart = normalizeStartDate(startDate);
@@ -464,6 +516,15 @@ export default function ReportsPage() {
 
     setStartDate(draftStartDate);
     setEndDate(draftEndDate);
+    setSelectedTagIds(draftSelectedTagIds);
+  }
+
+  function handleToggleDraftTag(tagId: string) {
+    setDraftSelectedTagIds((current) =>
+      current.includes(tagId)
+        ? current.filter((id) => id !== tagId)
+        : [...current, tagId],
+    );
   }
 
   function buildExportRows(): Array<Array<string | number>> {
@@ -655,6 +716,41 @@ export default function ReportsPage() {
 
           <button className="apply-btn" onClick={handleApplyFilters}>OK</button>
         </div>
+
+        <details
+          ref={tagFilterRef}
+          className="report-tags-filter"
+          open={isTagFilterOpen}
+          onToggle={(event) => setIsTagFilterOpen(event.currentTarget.open)}
+        >
+          <summary>
+            Tags: {draftSelectedTagIds.length === 0 ? "todas" : `${draftSelectedTagIds.length} selecionada(s)`}
+          </summary>
+          <div className="report-tags-filter-menu">
+            <button
+              type="button"
+              className="report-tags-filter-clear"
+              onClick={() => setDraftSelectedTagIds([])}
+            >
+              Limpar seleção
+            </button>
+
+            <div className="report-tags-filter-list">
+              {tags.length === 0 && <span className="report-tags-empty">Nenhuma tag cadastrada.</span>}
+              {tags.map((tag) => (
+                <label key={tag.id} className="report-tags-option">
+                  <input
+                    type="checkbox"
+                    checked={draftSelectedTagIds.includes(tag.id)}
+                    onChange={() => handleToggleDraftTag(tag.id)}
+                  />
+                  <span className="report-tags-color" style={{ backgroundColor: tag.color }} />
+                  <span>{tag.name}</span>
+                </label>
+              ))}
+            </div>
+          </div>
+        </details>
 
         <div className="export-menu-wrapper">
           <button className="export-btn" onClick={() => setShowExportMenu((prev) => !prev)}>

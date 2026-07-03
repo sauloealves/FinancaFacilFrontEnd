@@ -5,6 +5,7 @@ import LaunchesViewControls from "./LaunchesViewControls";
 import type { LaunchRow, LaunchSortField, LaunchViewMode } from "./types";
 import "./LaunchRow.css";
 import "./LaunchSpreadsheetView.css";
+import CategoryTagsTooltip from "../tags/CategoryTagsTooltip";
 
 type SpreadsheetLaunchRow = LaunchRow & {
   runningBalance: number;
@@ -255,7 +256,15 @@ export default function LaunchSpreadsheetView({
                         {getAccountLabel(row)}
                       </button>
                     </td>
-                    <td>{getCategoryLabel(row)}</td>
+                    <td>
+                      {isTransactionType(row.type, "transfer") ? (
+                        "-"
+                      ) : (
+                        <CategoryTagsTooltip categoryId={row.category?.id}>
+                          <span>{getCategoryLabel(row)}</span>
+                        </CategoryTagsTooltip>
+                      )}
+                    </td>
                     <td className={`launch-spreadsheet-number-cell ${valueTone}`}>
                       {formatValue(row, selectedAccounts)}
                     </td>

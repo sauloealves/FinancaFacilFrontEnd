@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   BarChart,
   Bar,
@@ -12,11 +12,17 @@ import {
 import { useAccounts } from "../contexts/accounts/useAccounts";
 import { useAccountFilter } from "../contexts/AccountFilterContext";
 import { useCategories } from "../contexts/categories/useCategories";
+import { useTags } from "../contexts/tags/useTags";
 import { useTheme } from "../contexts/theme/useTheme";
 import { getLaunches } from "../services/launchService";
 import { normalizeDateFromBackend, formatDateBR } from "../utils/date";
 import { isTransactionType } from "../utils/sortUtils";
 import type { LaunchRow, LaunchType } from "../features/launches/types";
+import {
+  buildExplicitTagIdsByCategory,
+  buildParentByCategoryId,
+  categoryMatchesTagFilter,
+} from "../features/tags/tagInheritance";
 import "./ReportComparisonPage.css";
 
 type ComparisonType = Extract<LaunchType, "expense" | "income">;
@@ -30,6 +36,7 @@ type ComparisonPeriod = {
 type ComparisonFilters = {
   type: ComparisonType;
   periods: ComparisonPeriod[];
+  selectedTagIds: string[];
 };
 
 type ComparisonSeries = {
@@ -258,16 +265,39 @@ export default function ReportComparisonPage() {
   const { accounts } = useAccounts();
   const { selectedAccounts } = useAccountFilter();
   const { categories } = useCategories();
+  const { tags, tagsByCategory } = useTags();
   const [draftType, setDraftType] = useState<ComparisonType>("expense");
+  const [draftSelectedTagIds, setDraftSelectedTagIds] = useState<string[]>([]);
+  const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
   const [draftPeriods, setDraftPeriods] = useState<ComparisonPeriod[]>(() => createDefaultPeriods());
   const [appliedFilters, setAppliedFilters] = useState<ComparisonFilters>({
     type: "expense",
     periods: createDefaultPeriods(),
+    selectedTagIds: [],
   });
   const [validationError, setValidationError] = useState("");
   const [loadError, setLoadError] = useState("");
   const [loading, setLoading] = useState(false);
   const [comparisonData, setComparisonData] = useState<ComparisonModel>({ rows: [], series: [] });
+  const tagFilterRef = useRef<HTMLDetailsElement | null>(null);
+
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (!isTagFilterOpen || !tagFilterRef.current) {
+        return;
+      }
+
+      if (event.target instanceof Node && !tagFilterRef.current.contains(event.target)) {
+        setIsTagFilterOpen(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [isTagFilterOpen]);
 
   useEffect(() => {
     let mounted = true;
@@ -283,7 +313,18 @@ export default function ReportComparisonPage() {
         const normalizedLaunches = normalizeLaunches(launches);
         const enrichedLaunches = normalizedLaunches.map((launch) => enrichLaunch(launch, accounts, categories));
         const accountFilteredLaunches = filterLaunchesBySelectedAccounts(enrichedLaunches, selectedAccounts);
-        const typeFilteredLaunches = accountFilteredLaunches.filter((launch) => {
+        const parentByCategoryId = buildParentByCategoryId(categories);
+        const explicitTagIdsByCategory = buildExplicitTagIdsByCategory(tagsByCategory);
+        const selectedTagIdSet = new Set(appliedFilters.selectedTagIds);
+        const tagFilteredLaunches = accountFilteredLaunches.filter((launch) =>
+          categoryMatchesTagFilter(
+            launch.category?.id,
+            selectedTagIdSet,
+            parentByCategoryId,
+            explicitTagIdsByCategory,
+          ),
+        );
+        const typeFilteredLaunches = tagFilteredLaunches.filter((launch) => {
           return (
             isTransactionType(launch.type, appliedFilters.type) &&
             !isTransactionType(launch.type, "transfer")
@@ -312,7 +353,7 @@ export default function ReportComparisonPage() {
     return () => {
       mounted = false;
     };
-  }, [appliedFilters, selectedAccounts, accounts, categories]);
+  }, [appliedFilters, selectedAccounts, accounts, categories, tagsByCategory]);
 
   const chartTitle = draftType === "expense" ? "Comparativo de despesas" : "Comparativo de receitas";
   const maxPeriodsReached = draftPeriods.length >= 12;
@@ -382,7 +423,16 @@ export default function ReportComparisonPage() {
     setAppliedFilters({
       type: draftType,
       periods: draftPeriods.map((period) => ({ ...period })),
+      selectedTagIds: draftSelectedTagIds,
     });
+  }
+
+  function handleToggleDraftTag(tagId: string) {
+    setDraftSelectedTagIds((current) =>
+      current.includes(tagId)
+        ? current.filter((id) => id !== tagId)
+        : [...current, tagId],
+    );
   }
 
   return (
@@ -408,6 +458,41 @@ export default function ReportComparisonPage() {
         </div>
 
         <div className="comparison-actions">
+          <details
+            ref={tagFilterRef}
+            className="comparison-tags-filter"
+            open={isTagFilterOpen}
+            onToggle={(event) => setIsTagFilterOpen(event.currentTarget.open)}
+          >
+            <summary>
+              Tags: {draftSelectedTagIds.length === 0 ? "todas" : `${draftSelectedTagIds.length} selecionada(s)`}
+            </summary>
+            <div className="comparison-tags-filter-menu">
+              <button
+                type="button"
+                className="comparison-tags-filter-clear"
+                onClick={() => setDraftSelectedTagIds([])}
+              >
+                Limpar seleção
+              </button>
+
+              <div className="comparison-tags-filter-list">
+                {tags.length === 0 && <span className="comparison-tags-empty">Nenhuma tag cadastrada.</span>}
+                {tags.map((tag) => (
+                  <label key={tag.id} className="comparison-tags-option">
+                    <input
+                      type="checkbox"
+                      checked={draftSelectedTagIds.includes(tag.id)}
+                      onChange={() => handleToggleDraftTag(tag.id)}
+                    />
+                    <span className="comparison-tags-color" style={{ backgroundColor: tag.color }} />
+                    <span>{tag.name}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          </details>
+
           <button
             type="button"
             className="apply-btn"

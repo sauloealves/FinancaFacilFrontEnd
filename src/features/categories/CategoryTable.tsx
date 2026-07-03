@@ -1,15 +1,21 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import type { Category } from "./types";
+import type { Tag } from "../tags/types";
+import TagBadge from "../tags/TagBadge";
 
 type Props = {
   readonly categories: Category[];
+  readonly getTagsForCategory: (categoryId: string) => Tag[];
+  readonly onManageTags: (category: Category) => void;
   readonly onEdit: (c: Category) => void;
   readonly onDelete: (id: string) => void;
 };
 
 export default function CategoryTable({
   categories,
+  getTagsForCategory,
+  onManageTags,
   onEdit,
   onDelete,
 }: Readonly<Props>) {
@@ -43,6 +49,8 @@ export default function CategoryTable({
     const elements: JSX.Element[] = [];
 
     // Renderizar a própria categoria
+    const categoryTags = getTagsForCategory(cat.id);
+
     elements.push(
       <tr key={cat.id}>
         <td data-label="Nome">
@@ -62,10 +70,24 @@ export default function CategoryTable({
           </div>
         </td>
         <td data-label="Categoria Pai">{getParentName(cat.parentId)}</td>
+        <td data-label="Tags">
+          {categoryTags.length === 0 ? (
+            <span style={{ color: "var(--gray-500)" }}>Sem tags</span>
+          ) : (
+            <div className="category-tags-list">
+              {categoryTags.map((tag) => (
+                <TagBadge key={tag.id} tag={tag} size="sm" />
+              ))}
+            </div>
+          )}
+        </td>
         <td data-label="Ações">
           <div className="category-actions">
             <button className="btn-action edit" onClick={() => onEdit(cat)}>
               ✏ Editar
+            </button>
+            <button className="btn-action" onClick={() => onManageTags(cat)}>
+              🏷 Gerenciar Tags
             </button>
             <button className="btn-action delete" onClick={() => onDelete(cat.id)}>
               🗑 Excluir
@@ -94,6 +116,7 @@ export default function CategoryTable({
         <tr>
           <th>Nome</th>
           <th>Categoria Pai</th>
+          <th>Tags</th>
           <th>Ações</th>
         </tr>
       </thead>
@@ -102,7 +125,7 @@ export default function CategoryTable({
           rootCategories.flatMap((cat) => renderCategory(cat, 0))
         ) : (
           <tr>
-            <td colSpan={3} style={{ textAlign: "center", padding: "20px" }}>
+            <td colSpan={4} style={{ textAlign: "center", padding: "20px" }}>
               Nenhuma categoria cadastrada
             </td>
           </tr>

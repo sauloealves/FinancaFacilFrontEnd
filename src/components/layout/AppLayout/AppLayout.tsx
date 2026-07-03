@@ -19,12 +19,18 @@ const titles: Record<string, string> = {
   "/reports": "Relatórios",
   "/reports/monthly": "Relatórios",
   "/reports/comparison": "Relatórios",
+  "/reports/tags": "Relatórios",
   "/launches": "Lançamentos",
+  "/tags": "Tags",
 };
 
 function getPageTitle(pathname: string): string {
   if (pathname.startsWith("/budgets/")) {
     return "Orçamentos";
+  }
+
+  if (pathname.startsWith("/tags/")) {
+    return "Tags";
   }
 
   return titles[pathname] ?? "Página Inicial";

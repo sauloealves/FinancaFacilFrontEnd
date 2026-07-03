@@ -16,6 +16,7 @@ const menuIcons: Record<string, string> = {
   "/accounts": "◫",
   "/reports": "◔",
   "/categories": "#",
+  "/tags": "🏷",
 };
 
 function Sidebar({

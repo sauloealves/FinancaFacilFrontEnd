@@ -1,0 +1,66 @@
+.category-tag-manager {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.category-tag-manager h4 {
+  margin: 0;
+}
+
+.category-tag-manager-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.category-tag-manager-list li {
+  border: 1px solid var(--gray-200);
+  border-radius: 8px;
+  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.category-tag-manager-associate-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: end;
+  gap: 8px;
+}
+
+.category-tag-manager-empty {
+  margin: 0;
+  color: var(--gray-500);
+}
+
+.category-tag-manager-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 13px;
+}
+
+@media (max-width: 768px) {
+  .category-tag-manager-associate-row {
+    grid-template-columns: 1fr;
+  }
+
+  .category-tag-manager-associate-row button {
+    width: 100%;
+  }
+
+  .category-tag-manager-list li {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .category-tag-manager-list li .btn-action {
+    width: 100%;
+    justify-content: center;
+  }
+}

@@ -2,6 +2,7 @@ import type { LaunchRow as LaunchRowType } from "./types";
 
 import "./LaunchRow.css";
 import { isTransactionType } from "../../utils/sortUtils";
+import CategoryTagsTooltip from "../tags/CategoryTagsTooltip";
 
 type LaunchRowProps = {
   row: LaunchRowType;
@@ -86,11 +87,13 @@ export default function LaunchRow({
         {isTransactionType(row.type, "transfer") ? (
           "—"
         ) : (
-          <span
-            className="category-display"            
-          >
-            {row.category?.name ?? "Selecionar"}
-          </span>
+          <CategoryTagsTooltip categoryId={row.category?.id}>
+            <span
+              className="category-display"
+            >
+              {row.category?.name ?? "Selecionar"}
+            </span>
+          </CategoryTagsTooltip>
         )}
       </button>
 

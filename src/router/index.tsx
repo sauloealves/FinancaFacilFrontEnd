@@ -16,8 +16,12 @@ import { CategoriesProvider } from '../contexts/categories/CategoriesProvider';
 import CategoriesPage from "../pages/CategoriesPage";
 import ReportsPage from "../pages/ReportsPage";
 import ReportComparisonPage from "../pages/ReportComparisonPage";
+import ReportByTagPage from "../pages/ReportByTagPage";
 import BudgetsPage from "../pages/BudgetsPage";
 import BudgetDetailPage from "../pages/BudgetDetailPage";
+import { TagsProvider } from "../contexts/tags/TagsProvider";
+import TagsPage from "../pages/TagsPage";
+import TagDetailPage from "../pages/TagDetailPage";
 
 export default function AppRouter() {
   return (
@@ -33,9 +37,11 @@ export default function AppRouter() {
             <PrivateRoute>
               <AccountsProvider>
                   <CategoriesProvider>
-                    <AccountFilterProvider>
-                      <AppLayout />
-                    </AccountFilterProvider>
+                    <TagsProvider>
+                      <AccountFilterProvider>
+                        <AppLayout />
+                      </AccountFilterProvider>
+                    </TagsProvider>
                   </CategoriesProvider>
                 </AccountsProvider>
             </PrivateRoute>
@@ -47,9 +53,12 @@ export default function AppRouter() {
           <Route path="/budgets" element={<BudgetsPage />} />
           <Route path="/budgets/:budgetId" element={<BudgetDetailPage />} />
           <Route path="/categories" element={<CategoriesPage />} />
+          <Route path="/tags" element={<TagsPage />} />
+          <Route path="/tags/:id" element={<TagDetailPage />} />
           <Route path="/reports" element={<Navigate to="/reports/monthly" replace />} />
           <Route path="/reports/monthly" element={<ReportsPage />} />
           <Route path="/reports/comparison" element={<ReportComparisonPage />} />
+          <Route path="/reports/tags" element={<ReportByTagPage />} />
           
         </Route>
       </Routes>

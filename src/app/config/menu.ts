@@ -16,9 +16,11 @@ export const menu: MenuItem[] = [
     children: [
       { label: "Relatório de despesa mensal", path: "/reports/monthly" },
       { label: "Gráfico comparativo", path: "/reports/comparison" },
+      { label: "Relatório por tag", path: "/reports/tags" },
     ],
   },
   // { label: "Integrações", path: "/integrations" },
   // { label: "Configurações", path: "/settings/profile" },
   { label: "Categorias", path: "/categories" },
+  { label: "Tags", path: "/tags" },
 ];

@@ -1,0 +1,42 @@
+.tag-form-modal-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tag-form-modal-fields input[type="text"] {
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  padding: 8px 10px;
+  font-size: 14px;
+  color: var(--gray-900);
+  background: var(--white);
+}
+
+.tag-form-modal-fields input[type="text"]:focus {
+  outline: none;
+  border-color: var(--primary-600);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.tag-form-modal-color-row {
+  display: grid;
+  grid-template-columns: 54px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+}
+
+.tag-form-modal-color-row input[type="color"] {
+  width: 54px;
+  height: 40px;
+  border: 1px solid var(--gray-300);
+  border-radius: 8px;
+  background: var(--white);
+  cursor: pointer;
+}
+
+.tag-form-modal-error {
+  margin: 0;
+  color: #b42318;
+  font-size: 12px;
+}

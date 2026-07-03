@@ -56,6 +56,81 @@
   flex-wrap: wrap;
 }
 
+.comparison-tags-filter {
+  position: relative;
+}
+
+.comparison-tags-filter summary {
+  list-style: none;
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-300);
+  background: var(--white);
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  font-weight: 600;
+}
+
+.comparison-tags-filter summary::-webkit-details-marker {
+  display: none;
+}
+
+.comparison-tags-filter-menu {
+  position: absolute;
+  top: 38px;
+  right: 0;
+  min-width: 260px;
+  max-width: min(340px, 80vw);
+  background: var(--white);
+  border: 1px solid var(--gray-200);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 12px 30px var(--shadow-color);
+  padding: 10px;
+  z-index: 15;
+}
+
+.comparison-tags-filter-clear {
+  height: 30px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-300);
+  background: var(--gray-100);
+  padding: 0 10px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  margin-bottom: 8px;
+}
+
+.comparison-tags-filter-list {
+  max-height: 220px;
+  overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.comparison-tags-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--gray-800);
+}
+
+.comparison-tags-color {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+}
+
+.comparison-tags-empty {
+  font-size: 12px;
+  color: var(--gray-600);
+}
+
 .comparison-apply-btn {
   background: var(--primary-600);
   border-color: var(--primary-600);
