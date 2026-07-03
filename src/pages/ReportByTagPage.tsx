@@ -154,14 +154,56 @@ function getTagDisplayColor(color: string | undefined): string {
   return color?.trim() ? color : "#64748b";
 }
 
-function createTagReportLaunch(launch: LaunchRow, launchValue: number): TagReportLaunch {
+function isGenericLabel(value: string | undefined): boolean {
+  if (!value) {
+    return true;
+  }
+
+  const normalized = value.trim().toLowerCase();
+  return normalized === "sem descrição" || normalized === "sem descricao";
+}
+
+function resolveDisplayName(
+  preferredName: string | undefined,
+  fallbackNameById: string | undefined,
+  defaultName: string,
+): string {
+  if (!isGenericLabel(preferredName)) {
+    return preferredName!.trim();
+  }
+
+  if (!isGenericLabel(fallbackNameById)) {
+    return fallbackNameById!.trim();
+  }
+
+  return defaultName;
+}
+
+function createTagReportLaunch(
+  launch: LaunchRow,
+  launchValue: number,
+  categoryNameById: Map<string, string>,
+  accountNameById: Map<string, string>,
+): TagReportLaunch {
+  const categoryName = resolveDisplayName(
+    launch.category?.name,
+    launch.category?.id ? categoryNameById.get(launch.category.id) : undefined,
+    "Sem categoria",
+  );
+
+  const accountName = resolveDisplayName(
+    launch.account?.name,
+    launch.account?.id ? accountNameById.get(launch.account.id) : undefined,
+    "Sem conta",
+  );
+
   return {
     id: launch.id,
     date: launch.date,
     description: launch.description,
     value: launchValue,
-    category: launch.category?.name ?? "Sem categoria",
-    account: launch.account?.name ?? "Sem conta",
+    category: categoryName,
+    account: accountName,
   };
 }
 
@@ -189,6 +231,14 @@ export default function ReportByTagPage() {
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState("");
   const tagFilterRef = useRef<HTMLDetailsElement | null>(null);
+  const categoryNameById = useMemo(
+    () => new Map(categories.map((category) => [category.id, category.name])),
+    [categories],
+  );
+  const accountNameById = useMemo(
+    () => new Map(accounts.map((account) => [account.id, account.name])),
+    [accounts],
+  );
   const monthKeys = useMemo(() => {
     const normalizedStart = normalizeStartDate(startDate);
     const normalizedEnd = normalizeEndDate(endDate);
@@ -287,7 +337,15 @@ export default function ReportByTagPage() {
             currentBucket.total += launchValue;
             currentBucket.launches.add(launch.id);
             if (!currentBucket.launchDetails.has(launch.id)) {
-              currentBucket.launchDetails.set(launch.id, createTagReportLaunch(launch, launchValue));
+              currentBucket.launchDetails.set(
+                launch.id,
+                createTagReportLaunch(
+                  launch,
+                  launchValue,
+                  categoryNameById,
+                  accountNameById,
+                ),
+              );
             }
 
             if (launchCategoryId) {
@@ -385,7 +443,9 @@ export default function ReportByTagPage() {
     selectedTagIds,
     selectedAccounts,
     accounts,
+    accountNameById,
     categories,
+    categoryNameById,
     tags,
     tagsByCategory,
     monthKeys,
