@@ -47,6 +47,8 @@ type CategorySummary = {
   total: number;
 };
 
+type SectionType = "income" | "expense";
+
 function enrichLaunch(launch: LaunchRow, accounts: Array<{ id: string; name: string }>, categories: Array<{ id: string; name: string }>): LaunchRow {
   const findAccountName = (id?: string) => accounts.find((acc) => acc.id === id)?.name;
   const findCategoryName = (id?: string) => categories.find((cat) => cat.id === id)?.name;
@@ -216,12 +218,99 @@ function getMonthRange(startDate: string, endDate: string): string[] {
   return months;
 }
 
-function getCategoryKey(section: "income" | "expense", category: string): string {
+function getCategoryKey(section: SectionType, category: string): string {
   return `${section}:${category}`;
 }
 
-function getSubcategoryKey(section: "income" | "expense", category: string, subcategory: string): string {
+function getSubcategoryKey(section: SectionType, category: string, subcategory: string): string {
   return `${section}:${category}:${subcategory}`;
+}
+
+function filterCategorySummariesByQuery(
+  categoriesToFilter: CategorySummary[],
+  monthKeys: string[],
+  query: string,
+): CategorySummary[] {
+  const normalizedQuery = query.trim().toLocaleLowerCase("pt-BR");
+  if (!normalizedQuery) {
+    return categoriesToFilter;
+  }
+
+  return categoriesToFilter.reduce<CategorySummary[]>((acc, category) => {
+    const categoryMatches = category.category.toLocaleLowerCase("pt-BR").includes(normalizedQuery);
+
+    if (categoryMatches) {
+      acc.push(category);
+      return acc;
+    }
+
+    const matchingSubcategories = category.subcategories
+      .map((sub) => {
+        const subcategoryMatches = sub.subcategory.toLocaleLowerCase("pt-BR").includes(normalizedQuery);
+        if (subcategoryMatches) {
+          return sub;
+        }
+
+        const matchedItems = sub.items.filter((item) =>
+          item.item.toLocaleLowerCase("pt-BR").includes(normalizedQuery),
+        );
+
+        if (matchedItems.length === 0) {
+          return null;
+        }
+
+        const byMonth = createZeroMonthMap(monthKeys);
+        for (const item of matchedItems) {
+          for (const monthKey of monthKeys) {
+            byMonth[monthKey] += item.byMonth[monthKey] || 0;
+          }
+        }
+
+        const total = monthKeys.reduce((sum, monthKey) => sum + byMonth[monthKey], 0);
+
+        return {
+          ...sub,
+          items: matchedItems,
+          byMonth,
+          total,
+        };
+      })
+      .filter((sub): sub is CategorySummary["subcategories"][number] => sub !== null);
+
+    if (matchingSubcategories.length === 0) {
+      return acc;
+    }
+
+    const categoryByMonth = createZeroMonthMap(monthKeys);
+    for (const sub of matchingSubcategories) {
+      for (const monthKey of monthKeys) {
+        categoryByMonth[monthKey] += sub.byMonth[monthKey] || 0;
+      }
+    }
+
+    const total = monthKeys.reduce((sum, monthKey) => sum + categoryByMonth[monthKey], 0);
+
+    acc.push({
+      ...category,
+      subcategories: matchingSubcategories,
+      byMonth: categoryByMonth,
+      total,
+    });
+
+    return acc;
+  }, []);
+}
+
+function getExpansionKeys(
+  section: SectionType,
+  categoriesToRead: CategorySummary[],
+): { categoryKeys: string[]; subcategoryKeys: string[] } {
+  const categoryKeys = categoriesToRead.map((category) => getCategoryKey(section, category.category));
+  const subcategoryKeys = categoriesToRead.flatMap((category) =>
+    category.subcategories.map((sub) => getSubcategoryKey(section, category.category, sub.subcategory)),
+  );
+
+  return { categoryKeys, subcategoryKeys };
 }
 
 function serializeCsvCell(cell: string | number): string {
@@ -345,6 +434,7 @@ export default function ReportsPage() {
   const [startDate, setStartDate] = useState(defaultDateRange.startDate);
   const [endDate, setEndDate] = useState(defaultDateRange.endDate);
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([]);
+  const [expenseCategoryQuery, setExpenseCategoryQuery] = useState("");
   const [isTagFilterOpen, setIsTagFilterOpen] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [reportRecords, setReportRecords] = useState<ReportRecord[]>([]);
@@ -508,6 +598,38 @@ export default function ReportsPage() {
     };
   }, [startDate, endDate, reportRecords]);
 
+  const filteredExpenseCategories = useMemo(
+    () => filterCategorySummariesByQuery(reportData.expenses.categories, reportData.monthKeys, expenseCategoryQuery),
+    [reportData.expenses.categories, reportData.monthKeys, expenseCategoryQuery],
+  );
+
+  const filteredExpenseSectionByMonth = useMemo(() => {
+    const byMonth = createZeroMonthMap(reportData.monthKeys);
+
+    for (const category of filteredExpenseCategories) {
+      for (const monthKey of reportData.monthKeys) {
+        byMonth[monthKey] += category.byMonth[monthKey] || 0;
+      }
+    }
+
+    return byMonth;
+  }, [filteredExpenseCategories, reportData.monthKeys]);
+
+  const filteredExpenseSectionTotal = useMemo(
+    () => reportData.monthKeys.reduce((sum, monthKey) => sum + (filteredExpenseSectionByMonth[monthKey] || 0), 0),
+    [reportData.monthKeys, filteredExpenseSectionByMonth],
+  );
+
+  const expansionKeys = useMemo(() => {
+    const incomeKeys = getExpansionKeys("income", reportData.incomes.categories);
+    const expenseKeys = getExpansionKeys("expense", filteredExpenseCategories);
+
+    return {
+      categoryKeys: [...incomeKeys.categoryKeys, ...expenseKeys.categoryKeys],
+      subcategoryKeys: [...incomeKeys.subcategoryKeys, ...expenseKeys.subcategoryKeys],
+    };
+  }, [reportData.incomes.categories, filteredExpenseCategories]);
+
   function handleApplyFilters() {
     if (draftStartDate > draftEndDate) {
       alert("Data inicial nao pode ser maior que data final.");
@@ -585,19 +707,31 @@ export default function ReportsPage() {
     setShowExportMenu(false);
   }
 
-  function toggleSection(section: "income" | "expense") {
+  function toggleSection(section: SectionType) {
     setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section],
     }));
   }
 
-  function isCategoryExpanded(section: "income" | "expense", category: string): boolean {
+  function handleExpandAll() {
+    setExpandedSections({ income: true, expense: true });
+    setExpandedCategories(Object.fromEntries(expansionKeys.categoryKeys.map((key) => [key, true])));
+    setExpandedSubcategories(Object.fromEntries(expansionKeys.subcategoryKeys.map((key) => [key, true])));
+  }
+
+  function handleCollapseAll() {
+    setExpandedSections({ income: false, expense: false });
+    setExpandedCategories(Object.fromEntries(expansionKeys.categoryKeys.map((key) => [key, false])));
+    setExpandedSubcategories(Object.fromEntries(expansionKeys.subcategoryKeys.map((key) => [key, false])));
+  }
+
+  function isCategoryExpanded(section: SectionType, category: string): boolean {
     const key = getCategoryKey(section, category);
     return expandedCategories[key] ?? true;
   }
 
-  function toggleCategory(section: "income" | "expense", category: string) {
+  function toggleCategory(section: SectionType, category: string) {
     const key = getCategoryKey(section, category);
     setExpandedCategories((prev) => ({
       ...prev,
@@ -605,12 +739,12 @@ export default function ReportsPage() {
     }));
   }
 
-  function isSubcategoryExpanded(section: "income" | "expense", category: string, subcategory: string): boolean {
+  function isSubcategoryExpanded(section: SectionType, category: string, subcategory: string): boolean {
     const key = getSubcategoryKey(section, category, subcategory);
     return expandedSubcategories[key] ?? true;
   }
 
-  function toggleSubcategory(section: "income" | "expense", category: string, subcategory: string) {
+  function toggleSubcategory(section: SectionType, category: string, subcategory: string) {
     const key = getSubcategoryKey(section, category, subcategory);
     setExpandedSubcategories((prev) => ({
       ...prev,
@@ -619,7 +753,7 @@ export default function ReportsPage() {
   }
 
   function renderSubcategoryRows(
-    section: "income" | "expense",
+    section: SectionType,
     category: CategorySummary,
     sub: CategorySummary["subcategories"][number]
   ): JSX.Element {
@@ -661,7 +795,7 @@ export default function ReportsPage() {
     );
   }
 
-  function renderCategoryRows(section: "income" | "expense", categoriesToRender: CategorySummary[]): JSX.Element[] {
+  function renderCategoryRows(section: SectionType, categoriesToRender: CategorySummary[]): JSX.Element[] {
     return categoriesToRender.map((category) => (
       <Fragment key={`${section}-${category.category}`}>
         <tr className="category-row" key={`${section}-category-${category.category}`}>
@@ -752,6 +886,22 @@ export default function ReportsPage() {
           </div>
         </details>
 
+        <div className="reports-category-filter">
+          <label htmlFor="reports-expense-category-filter">Categoria (despesas)</label>
+          <input
+            id="reports-expense-category-filter"
+            type="text"
+            placeholder="Digite para filtrar..."
+            value={expenseCategoryQuery}
+            onChange={(event) => setExpenseCategoryQuery(event.target.value)}
+          />
+        </div>
+
+        <div className="reports-expand-controls">
+          <button type="button" className="toggle-all-btn" onClick={handleExpandAll}>Expandir geral</button>
+          <button type="button" className="toggle-all-btn" onClick={handleCollapseAll}>Retrair geral</button>
+        </div>
+
         <div className="export-menu-wrapper">
           <button className="export-btn" onClick={() => setShowExportMenu((prev) => !prev)}>
             Exportar
@@ -819,13 +969,13 @@ export default function ReportsPage() {
                   <span>Saidas</span>
                 </button>
               </td>
-              <td>{formatCurrency(reportData.expenses.sectionTotal)}</td>
+              <td>{formatCurrency(filteredExpenseSectionTotal)}</td>
               {reportData.monthKeys.map((monthKey) => (
-                <td key={`expense-${monthKey}`}>{formatCurrency(reportData.expenses.sectionByMonth[monthKey] || 0)}</td>
+                <td key={`expense-${monthKey}`}>{formatCurrency(filteredExpenseSectionByMonth[monthKey] || 0)}</td>
               ))}
             </tr>
 
-            {expandedSections.expense && renderCategoryRows("expense", reportData.expenses.categories)}
+            {expandedSections.expense && renderCategoryRows("expense", filteredExpenseCategories)}
 
             <tr className="balance-row">
               <td>Saldo</td>

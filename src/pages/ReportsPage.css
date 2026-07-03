@@ -69,6 +69,43 @@
   margin-left: auto;
 }
 
+.reports-category-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.reports-category-filter label {
+  font-size: 13px;
+  color: var(--gray-700);
+  white-space: nowrap;
+}
+
+.reports-category-filter input {
+  width: min(280px, 48vw);
+  height: 34px;
+  border: 1px solid var(--gray-300);
+  border-radius: var(--radius-sm);
+  padding: 0 10px;
+  font-size: 13px;
+}
+
+.reports-expand-controls {
+  display: inline-flex;
+  gap: 8px;
+}
+
+.toggle-all-btn {
+  height: 34px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--gray-300);
+  background: var(--gray-100);
+  padding: 0 12px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+}
+
 .report-tags-filter {
   position: relative;
 }
