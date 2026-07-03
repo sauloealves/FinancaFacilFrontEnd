@@ -22,6 +22,16 @@ type TagReportCard = {
   launchCount: number;
   categoryCount: number;
   isUntagged: boolean;
+  launches: TagReportLaunch[];
+};
+
+type TagReportLaunch = {
+  id: string;
+  date: string;
+  description: string;
+  value: number;
+  category: string;
+  account: string;
 };
 
 function formatCurrency(value: number): string {
@@ -29,6 +39,11 @@ function formatCurrency(value: number): string {
     style: "currency",
     currency: "BRL",
   });
+}
+
+function formatDate(date: string): string {
+  const [year, month, day] = date.split("-").map(Number);
+  return new Date(year, month - 1, day).toLocaleDateString("pt-BR");
 }
 
 function formatDateInputValue(date: Date): string {
@@ -136,7 +151,24 @@ function getInheritedTagIds(
 }
 
 function getTagDisplayColor(color: string | undefined): string {
-  return color && color.trim() ? color : "#64748b";
+  return color?.trim() ? color : "#64748b";
+}
+
+function createTagReportLaunch(launch: LaunchRow, launchValue: number): TagReportLaunch {
+  return {
+    id: launch.id,
+    date: launch.date,
+    description: launch.description,
+    value: launchValue,
+    category: launch.category?.name ?? "Sem categoria",
+    account: launch.account?.name ?? "Sem conta",
+  };
+}
+
+function buildSortedLaunches(launchDetails: Map<string, TagReportLaunch>): TagReportLaunch[] {
+  return Array.from(launchDetails.values()).sort((left, right) =>
+    right.date.localeCompare(left.date),
+  );
 }
 
 export default function ReportByTagPage() {
@@ -226,6 +258,7 @@ export default function ReportByTagPage() {
             total: number;
             launches: Set<string>;
             categories: Set<string>;
+            launchDetails: Map<string, TagReportLaunch>;
           }
         >();
 
@@ -244,16 +277,18 @@ export default function ReportByTagPage() {
               total: 0,
               launches: new Set<string>(),
               categories: new Set<string>(),
+              launchDetails: new Map<string, TagReportLaunch>(),
             };
 
             const currentMonthKey = monthKeyFromDate(launch.date);
-            if (currentBucket.byMonth[currentMonthKey] === undefined) {
-              currentBucket.byMonth[currentMonthKey] = 0;
-            }
+            currentBucket.byMonth[currentMonthKey] ??= 0;
 
             currentBucket.byMonth[currentMonthKey] += launchValue;
             currentBucket.total += launchValue;
             currentBucket.launches.add(launch.id);
+            if (!currentBucket.launchDetails.has(launch.id)) {
+              currentBucket.launchDetails.set(launch.id, createTagReportLaunch(launch, launchValue));
+            }
 
             if (launchCategoryId) {
               currentBucket.categories.add(launchCategoryId);
@@ -291,6 +326,7 @@ export default function ReportByTagPage() {
                 launchCount: bucketValue.launches.size,
                 categoryCount: bucketValue.categories.size,
                 isUntagged: true,
+                launches: buildSortedLaunches(bucketValue.launchDetails),
               } satisfies TagReportCard;
             }
 
@@ -305,6 +341,7 @@ export default function ReportByTagPage() {
               launchCount: bucketValue.launches.size,
               categoryCount: bucketValue.categories.size,
               isUntagged: false,
+              launches: buildSortedLaunches(bucketValue.launchDetails),
             } satisfies TagReportCard;
           })
           .filter((card) => card.total > 0)
@@ -473,7 +510,42 @@ export default function ReportByTagPage() {
                 </footer>
               </div>
 
-              <div className="report-by-tag-months" role="group" aria-label={`Valores por mês da tag ${card.label}`}>
+              <div className="report-by-tag-hover-popup" role="tooltip">
+                <div className="report-by-tag-hover-popup-header">Lançamentos da tag</div>
+
+                {card.launches.length === 0 && (
+                  <div className="report-by-tag-hover-popup-empty">Nenhum lançamento encontrado.</div>
+                )}
+
+                {card.launches.length > 0 && (
+                  <div className="report-by-tag-hover-popup-table-wrapper">
+                    <table className="report-by-tag-hover-popup-table">
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Descrição</th>
+                          <th>Valor</th>
+                          <th>Categoria</th>
+                          <th>Conta</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {card.launches.map((launch) => (
+                          <tr key={launch.id}>
+                            <td>{formatDate(launch.date)}</td>
+                            <td>{launch.description}</td>
+                            <td>{formatCurrency(launch.value)}</td>
+                            <td>{launch.category}</td>
+                            <td>{launch.account}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              <div className="report-by-tag-months" aria-label={`Valores por mês da tag ${card.label}`}>
                 {monthKeys.map((monthKey) => (
                   <div key={`${card.key}-${monthKey}`} className="report-by-tag-month-cell">
                     <span>{formatMonthYearLabel(monthKey)}</span>
